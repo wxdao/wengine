@@ -1,7 +1,8 @@
 package opengl
 
-var defaultMeshShader_COLOR_NOLIGHT = glShaderProgram{
-	vertexSource: `
+var defaultShaders = map[string]*glShaderProgram{
+	"mesh_color_nolight": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -20,7 +21,7 @@ var defaultMeshShader_COLOR_NOLIGHT = glShaderProgram{
 			gl_Position = projection * view * model * vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		in vec4 vs_color;
@@ -31,10 +32,10 @@ var defaultMeshShader_COLOR_NOLIGHT = glShaderProgram{
 			color = vs_color;
 		}
 	`,
-}
+	},
 
-var defaultMeshShader_TEXTURE_NOLIGHT = glShaderProgram{
-	vertexSource: `
+	"mesh_texture_nolight": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -52,7 +53,7 @@ var defaultMeshShader_TEXTURE_NOLIGHT = glShaderProgram{
 			gl_Position = projection * view * model * vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		in vec2 vs_uv;
@@ -65,12 +66,12 @@ var defaultMeshShader_TEXTURE_NOLIGHT = glShaderProgram{
 			color = texture(diffuseMap, vs_uv);
 		}
 	`,
-}
+	},
 
-// ----------------------------------------------------------------------------------------------
+	// ----------------------------------------------------------------------------------------------
 
-var defaultMeshShader_COLOR = glShaderProgram{
-	vertexSource: `
+	"mesh_color": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -93,7 +94,7 @@ var defaultMeshShader_COLOR = glShaderProgram{
 			gl_Position = projection * view * model * vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		struct dirLight {
@@ -165,10 +166,10 @@ var defaultMeshShader_COLOR = glShaderProgram{
 			color = vec4(result, 1.0);
 		}
 	`,
-}
+	},
 
-var defaultMeshShader_TEXTURE = glShaderProgram{
-	vertexSource: `
+	"mesh_texture": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -190,7 +191,7 @@ var defaultMeshShader_TEXTURE = glShaderProgram{
 			gl_Position = projection * view * model * vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		struct dirLight {
@@ -262,12 +263,12 @@ var defaultMeshShader_TEXTURE = glShaderProgram{
 			color = vec4(result, 1.0);
 		}
 	`,
-}
+	},
 
-// ----------------------------------------------------------------------------------------------
+	// ----------------------------------------------------------------------------------------------
 
-var defaultMeshShader_COLOR_DEFERRED = glShaderProgram{
-	vertexSource: `
+	"mesh_color_deferred": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -291,7 +292,7 @@ var defaultMeshShader_COLOR_DEFERRED = glShaderProgram{
 			gl_Position = projection * view * model * vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		layout (location = 0) out vec3 gPosition;
@@ -310,10 +311,10 @@ var defaultMeshShader_COLOR_DEFERRED = glShaderProgram{
 			gDiffuse = vec4(vs_color.rgb, recvShadow);
 		}
 	`,
-}
+	},
 
-var defaultMeshShader_TEXTURE_DEFERRED = glShaderProgram{
-	vertexSource: `
+	"mesh_texture_deferred": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -336,7 +337,7 @@ var defaultMeshShader_TEXTURE_DEFERRED = glShaderProgram{
 			gl_Position = projection * view * model * vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		layout (location = 0) out vec3 gPosition;
@@ -357,10 +358,10 @@ var defaultMeshShader_TEXTURE_DEFERRED = glShaderProgram{
 			gDiffuse = vec4(texture(diffuseMap, vs_uv).rgb, recvShadow);
 		}
 	`,
-}
+	},
 
-var defaultDeferredShader_NOLIGHT = glShaderProgram{
-	vertexSource: `
+	"deferred_blend_ambient": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -373,23 +374,24 @@ var defaultDeferredShader_NOLIGHT = glShaderProgram{
 			gl_Position = vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		in vec2 vs_uv;
 
+		uniform vec3 ambient;
 		uniform sampler2D gDiffuse;
 
 		out vec4 color;
 
 		void main() {
-			color = vec4(texture(gDiffuse, vs_uv).rgb, 1.0);
+			color = vec4(ambient * texture(gDiffuse, vs_uv).rgb, 1.0);
 		}
 	`,
-}
+	},
 
-var defaultDeferredShader = glShaderProgram{
-	vertexSource: `
+	"deferred_dirLight": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -402,17 +404,132 @@ var defaultDeferredShader = glShaderProgram{
 			gl_Position = vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
-		struct dirLight {
+		struct DirLight {
 			vec3 position;
 			vec3 direction;
 			vec3 diffuse;
 			vec3 specular;
 		};
 
-		struct pointLight {
+		in vec2 vs_uv;
+
+		uniform mat4 lightMatrix;
+		uniform sampler2D gPosition;
+		uniform sampler2D gNormal;
+		uniform sampler2D gDiffuse;
+		uniform sampler2D sDirMap;
+
+		uniform DirLight dirLight;
+
+		uniform vec3 cameraPosition;
+
+		out vec4 color;
+
+		vec3 calculateDirLight(DirLight light) {
+			vec3 meshDiffuse = texture(gDiffuse, vs_uv).rgb;
+			vec3 vs_fragPosition = texture(gPosition, vs_uv).rgb;
+			vec3 vs_normal = texture(gNormal, vs_uv).rgb;
+
+			vec3 viewDirection = normalize(vs_fragPosition - cameraPosition);
+			vec3 halfDirection = -normalize(viewDirection + light.direction);
+
+			vec4 fragLightPos = lightMatrix * vec4(vs_fragPosition, 1.0);
+			vec3 projPos = fragLightPos.xyz / fragLightPos.w;
+			projPos = projPos * 0.5 + 0.5;
+			float recvShadow = texture(gDiffuse, vs_uv).a;
+			float currentDepth = projPos.z;
+			float closetDepth = texture(sDirMap, projPos.xy).r;
+			float shadow = currentDepth - 0.005 > closetDepth ? 1.0 : 0.0;
+
+			vec3 diffuse = light.diffuse * max(dot(normalize(vs_normal), normalize(-light.direction)), 0.0) * meshDiffuse;
+			vec3 specular = light.specular * pow(max(dot(vs_normal, halfDirection), 0.0), 32) * vec3(1.0, 1.0, 1.0);
+
+			return (1.0 - shadow) * (diffuse + specular);
+		}
+
+		void main() {
+			color = vec4(calculateDirLight(dirLight), 1.0);
+		}
+	`,
+	},
+
+	"deferred_dirLight_noshadow": {
+		vertexSource: `
+		#version 410 core
+
+		layout (location = 0) in vec3 position;
+		layout (location = 1) in vec2 uv;
+
+		out vec2 vs_uv;
+
+		void main() {
+			vs_uv = uv;
+			gl_Position = vec4(position, 1.0);
+		}
+	`,
+		fragmentSource: `
+		#version 410 core
+
+		struct DirLight {
+			vec3 position;
+			vec3 direction;
+			vec3 diffuse;
+			vec3 specular;
+		};
+
+		in vec2 vs_uv;
+
+		uniform sampler2D gPosition;
+		uniform sampler2D gNormal;
+		uniform sampler2D gDiffuse;
+
+		uniform DirLight dirLight;
+
+		uniform vec3 cameraPosition;
+
+		out vec4 color;
+
+		vec3 calculateDirLight(DirLight light) {
+			vec3 meshDiffuse = texture(gDiffuse, vs_uv).rgb;
+			vec3 vs_fragPosition = texture(gPosition, vs_uv).rgb;
+			vec3 vs_normal = texture(gNormal, vs_uv).rgb;
+
+			vec3 viewDirection = normalize(vs_fragPosition - cameraPosition);
+			vec3 halfDirection = -normalize(viewDirection + light.direction);
+
+			vec3 diffuse = light.diffuse * max(dot(normalize(vs_normal), normalize(-light.direction)), 0.0) * meshDiffuse;
+			vec3 specular = light.specular * pow(max(dot(vs_normal, halfDirection), 0.0), 32) * vec3(1.0, 1.0, 1.0);
+
+			return diffuse + specular;
+		}
+
+		void main() {
+			color = vec4(calculateDirLight(dirLight), 1.0);
+		}
+	`,
+	},
+
+	"deferred_pointLight_noshadow": {
+		vertexSource: `
+		#version 410 core
+
+		layout (location = 0) in vec3 position;
+		layout (location = 1) in vec2 uv;
+
+		out vec2 vs_uv;
+
+		void main() {
+			vs_uv = uv;
+			gl_Position = vec4(position, 1.0);
+		}
+	`,
+		fragmentSource: `
+		#version 410 core
+
+		struct PointLight {
 			vec3 position;
 			float range;
 			vec3 diffuse;
@@ -427,31 +544,13 @@ var defaultDeferredShader = glShaderProgram{
 
 		uniform vec3 ambient;
 
-		uniform dirLight dirLights[10];
-		uniform int num_dirLight = 0;
-
-		uniform pointLight pointLights[50];
-		uniform int num_pointLight = 0;
+		uniform PointLight pointLight;
 
 		uniform vec3 cameraPosition;
 
 		out vec4 color;
 
-		vec3 calculateDirLight(dirLight light) {
-			vec3 meshDiffuse = texture(gDiffuse, vs_uv).rgb;
-			vec3 vs_fragPosition = texture(gPosition, vs_uv).rgb;
-			vec3 vs_normal = texture(gNormal, vs_uv).rgb;
-
-			vec3 viewDirection = normalize(vs_fragPosition - cameraPosition);
-			vec3 halfDirection = -normalize(viewDirection + light.direction);
-
-			vec3 diffuse = light.diffuse * max(dot(normalize(vs_normal), normalize(-light.direction)), 0.0) * meshDiffuse;
-			vec3 specular = light.specular * pow(max(dot(vs_normal, halfDirection), 0.0), 32) * vec3(1.0, 1.0, 1.0);
-
-			return diffuse + specular;
-		}
-
-		vec3 calculatePointLight(pointLight light) {
+		vec3 calculatePointLight(PointLight light) {
 			vec3 meshDiffuse = texture(gDiffuse, vs_uv).rgb;
 			vec3 vs_fragPosition = texture(gPosition, vs_uv).rgb;
 			vec3 vs_normal = texture(gNormal, vs_uv).rgb;
@@ -466,24 +565,16 @@ var defaultDeferredShader = glShaderProgram{
 			vec3 specular = light.specular * pow(max(dot(vs_normal, halfDirection), 0.0), 32) * vec3(1.0, 1.0, 1.0);
 
 			return attenuation * (diffuse + specular);
-			return vec3(1.0, 1.0, 1.0);
 		}
 
 		void main() {
-			vec3 result = ambient * texture(gDiffuse, vs_uv).rgb;
-			for (int i = 0; i < num_dirLight; ++i) {
-				result = result + calculateDirLight(dirLights[i]);
-			}
-			for (int i = 0; i < num_pointLight; ++i) {
-				result = result + calculatePointLight(pointLights[i]);
-			}
-			color = vec4(result, 1.0);
+			color = vec4(calculatePointLight(pointLight), 1.0);
 		}
 	`,
-}
+	},
 
-var defaultShadowMapShader_DIRLIGHT = glShaderProgram{
-	vertexSource: `
+	"shadow_map_dirLight": {
+		vertexSource: `
 		#version 410 core
 
 		layout (location = 0) in vec3 position;
@@ -495,95 +586,11 @@ var defaultShadowMapShader_DIRLIGHT = glShaderProgram{
 			gl_Position = lightMatrix * model * vec4(position, 1.0);
 		}
 	`,
-	fragmentSource: `
+		fragmentSource: `
 		#version 410 core
 
 		void main() {
 		}
 	`,
-}
-
-var defaultBlendShadowShader_DIRLIGHT_DEFERRED = glShaderProgram{
-	vertexSource: `
-		#version 410 core
-
-		layout (location = 0) in vec3 position;
-		layout (location = 1) in vec2 uv;
-
-		out vec2 vs_uv;
-
-		void main() {
-			vs_uv = uv;
-			gl_Position = vec4(position, 1.0);
-		}
-	`,
-	fragmentSource: `
-		#version 410 core
-
-		in vec2 vs_uv;
-
-		uniform vec3 ambient;
-		uniform mat4 lightMatrix;
-		uniform sampler2D sDirMap;
-		uniform sampler2D gPosition;
-		uniform sampler2D gDiffuse;
-
-		out vec4 color;
-
-		void main() {
-			vec3 fragPos = texture(gPosition, vs_uv).xyz;
-			vec3 diffuse = texture(gDiffuse, vs_uv).rgb;
-			vec4 fragLightPos = lightMatrix * vec4(fragPos, 1.0);
-			vec3 projPos = fragLightPos.xyz / fragLightPos.w;
-			projPos = projPos * 0.5 + 0.5;
-			float recvShadow = texture(gDiffuse, vs_uv).a;
-
-			float currentDepth = projPos.z;
-
-			float closetDepth = texture(sDirMap, projPos.xy).r;
-
-			float shadow = currentDepth - 0.005 > closetDepth ? 1.0 : 0.0;
-
-			color = vec4(ambient * diffuse, recvShadow * shadow);
-		}
-	`,
-}
-
-// ----------------------------------------------------------------------------------------------
-
-var defaultShadowMapShader_DIRLIGHT_DEFERRED_DEBUG = glShaderProgram{
-	vertexSource: `
-		#version 410 core
-
-		layout (location = 0) in vec3 position;
-		layout (location = 1) in vec2 uv;
-
-		out vec2 vs_uv;
-
-		void main() {
-			vs_uv = uv;
-			gl_Position = vec4(position, 1.0);
-		}
-	`,
-	fragmentSource: `
-		#version 410 core
-
-		in vec2 vs_uv;
-
-		uniform mat4 lightMatrix;
-
-		uniform sampler2D sDirMap;
-		uniform sampler2D gPosition;
-
-		out vec4 color;
-
-		void main() {
-			vec3 fragPos = texture(gPosition, vs_uv).xyz;
-			vec4 fragLightPos = lightMatrix * vec4(fragPos, 1.0);
-			vec3 projPos = fragLightPos.xyz / fragLightPos.w;
-			projPos = projPos * 0.5 + 0.5;
-
-			color = vec4(vec3(texture(sDirMap, projPos.xy).r), 1.0);
-		}
-	`,
+	},
 }

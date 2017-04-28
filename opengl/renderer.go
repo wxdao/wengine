@@ -69,71 +69,13 @@ func (r *renderer) Init(context *Context) error {
 }
 
 func (r *renderer) loadDefaultShaders() error {
-	if err := defaultMeshShader_COLOR_NOLIGHT.install(); err != nil {
-		return err
+	for name, shader := range defaultShaders {
+		if err := shader.install(); err != nil {
+			return err
+		}
+		r.programs["___"+name] = shader
+		println("installed shader: ___" + name)
 	}
-	r.programs["defaultMeshShader_COLOR_NOLIGHT"] = &defaultMeshShader_COLOR_NOLIGHT
-	println("installed shader: defaultMeshShader_COLOR_NOLIGHT")
-
-	if err := defaultMeshShader_TEXTURE_NOLIGHT.install(); err != nil {
-		return err
-	}
-	r.programs["defaultMeshShader_TEXTURE_NOLIGHT"] = &defaultMeshShader_TEXTURE_NOLIGHT
-	println("installed shader: defaultMeshShader_TEXTURE_NOLIGHT")
-
-	if err := defaultMeshShader_COLOR.install(); err != nil {
-		return err
-	}
-	r.programs["defaultMeshShader_COLOR"] = &defaultMeshShader_COLOR
-	println("installed shader: defaultMeshShader_COLOR")
-
-	if err := defaultMeshShader_TEXTURE.install(); err != nil {
-		return err
-	}
-	r.programs["defaultMeshShader_TEXTURE"] = &defaultMeshShader_TEXTURE
-	println("installed shader: defaultMeshShader_TEXTURE")
-
-	if err := defaultMeshShader_TEXTURE_DEFERRED.install(); err != nil {
-		return err
-	}
-	r.programs["defaultMeshShader_TEXTURE_DEFERRED"] = &defaultMeshShader_TEXTURE_DEFERRED
-	println("installed shader: defaultMeshShader_TEXTURE_DEFERRED")
-
-	if err := defaultMeshShader_COLOR_DEFERRED.install(); err != nil {
-		return err
-	}
-	r.programs["defaultMeshShader_COLOR_DEFERRED"] = &defaultMeshShader_COLOR_DEFERRED
-	println("installed shader: defaultMeshShader_COLOR_DEFERRED")
-
-	if err := defaultDeferredShader.install(); err != nil {
-		return err
-	}
-	r.programs["defaultDeferredShader"] = &defaultDeferredShader
-	println("installed shader: defaultDeferredShader")
-
-	if err := defaultDeferredShader_NOLIGHT.install(); err != nil {
-		return err
-	}
-	r.programs["defaultDeferredShader_NOLIGHT"] = &defaultDeferredShader_NOLIGHT
-	println("installed shader: defaultDeferredShader_NOLIGHT")
-
-	if err := defaultShadowMapShader_DIRLIGHT.install(); err != nil {
-		return err
-	}
-	r.programs["defaultShadowMapShader_DIRLIGHT"] = &defaultShadowMapShader_DIRLIGHT
-	println("installed shader: defaultShadowMapShader_DIRLIGHT")
-
-	if err := defaultBlendShadowShader_DIRLIGHT_DEFERRED.install(); err != nil {
-		return err
-	}
-	r.programs["defaultBlendShadowShader_DIRLIGHT_DEFERRED"] = &defaultBlendShadowShader_DIRLIGHT_DEFERRED
-	println("installed shader: defaultBlendShadowShader_DIRLIGHT_DEFERRED")
-
-	if err := defaultShadowMapShader_DIRLIGHT_DEFERRED_DEBUG.install(); err != nil {
-		return err
-	}
-	r.programs["defaultShadowMapShader_DIRLIGHT_DEFERRED_DEBUG"] = &defaultShadowMapShader_DIRLIGHT_DEFERRED_DEBUG
-	println("installed shader: defaultShadowMapShader_DIRLIGHT_DEFERRED_DEBUG")
 
 	return nil
 }

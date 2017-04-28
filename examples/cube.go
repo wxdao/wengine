@@ -48,7 +48,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	dirLightObject.Translate(mgl32.Vec3{0, 10, 10})
 	dirLightObject.Rotate(mgl32.DegToRad(-90), mgl32.Vec3{1, 0, 0})
 	dirLightObject.AttachComponent(dirLight)
-	dirLightObject.SetEnabled(false)
+	dirLightObject.SetEnabled(true)
 	scene.RegisterObject("dirLight", dirLightObject)
 
 	pointLight := &wengine.LightComponent{}

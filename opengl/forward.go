@@ -143,14 +143,14 @@ func (r *forwardShading) selectShader(mesh *MeshComponent, lights []*LightCompon
 	material := r.renderer.materials[mesh.Material]
 	if material.diffuseMap != 0 {
 		if hasLights {
-			return &defaultMeshShader_TEXTURE, nil
+			return defaultShaders["mesh_texture"], nil
 		}
-		return &defaultMeshShader_TEXTURE_NOLIGHT, nil
+		return defaultShaders["mesh_texture_nolight"], nil
 	} else {
 		if hasLights {
-			return &defaultMeshShader_COLOR, nil
+			return defaultShaders["mesh_color"], nil
 		}
-		return &defaultMeshShader_COLOR_NOLIGHT, nil
+		return defaultShaders["mesh_color_nolight"], nil
 	}
 }
 
