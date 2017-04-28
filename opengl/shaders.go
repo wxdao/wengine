@@ -447,7 +447,7 @@ var defaultShaders = map[string]*glShaderProgram{
 			vec3 diffuse = light.diffuse * max(dot(normalize(vs_normal), normalize(-light.direction)), 0.0) * meshDiffuse;
 			vec3 specular = light.specular * pow(max(dot(vs_normal, halfDirection), 0.0), 32) * vec3(1.0, 1.0, 1.0);
 
-			return (1.0 - shadow) * (diffuse + specular);
+			return (1.0 - recvShadow * shadow) * (diffuse + specular);
 		}
 
 		void main() {
