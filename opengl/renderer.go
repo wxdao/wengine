@@ -37,7 +37,7 @@ func newRenderer() *renderer {
 		meshes:              map[string]*glMesh{},
 		materials:           map[string]*glMaterial{},
 		programs:            map[string]*glShaderProgram{},
-		shadowMapResolution: 4096,
+		shadowMapResolution: 2048,
 		assetsToInstall:     []string{},
 	}
 	//r.pc = &forwardShading{renderer: r}
@@ -284,6 +284,8 @@ type glShaderProgram struct {
 	modelLoc, viewLoc, projectionLoc uint32
 
 	program uint32
+
+	locations map[string]int32
 }
 
 func (p *glShaderProgram) installed() bool {
@@ -334,7 +336,17 @@ func (p *glShaderProgram) install() error {
 		return errors.New("program: " + log)
 	}
 	p.program = program
+	p.locations = map[string]int32{}
 	return nil
+}
+
+func (p *glShaderProgram) getLocation(name string) int32 {
+	location, exists := p.locations[name]
+	if !exists {
+		location = gl.GetUniformLocation(p.program, gl.Str(name + "\x00"))
+		p.locations[name] = location
+	}
+	return location
 }
 
 func compileShader(source string, shaderType uint32) (uint32, error) {

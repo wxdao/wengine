@@ -2,6 +2,7 @@ package opengl
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/go-gl/mathgl/mgl32"
 	. "github.com/wxdao/wengine"
@@ -16,10 +17,11 @@ type deferredShading struct {
 	gDiffuse  uint32
 	gDepth    uint32
 
-	sBuffer   uint32
-	sDirMap   uint32
-	sPointMap uint32
-	sDepth    uint32
+	sDirBuffer   uint32
+	sDirMap      uint32
+	sPointBuffer uint32
+	sPointMap    uint32
+	sDepth       uint32
 
 	quad uint32
 }
@@ -86,7 +88,8 @@ func (r *deferredShading) initGBuffer() error {
 }
 
 func (r *deferredShading) initSBuffer() error {
-	gl.GenFramebuffers(1, &r.sBuffer)
+	gl.GenFramebuffers(1, &r.sDirBuffer)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sDirBuffer)
 
 	gl.GenTextures(1, &r.sDirMap)
 	gl.BindTexture(gl.TEXTURE_2D, r.sDirMap)
@@ -97,10 +100,47 @@ func (r *deferredShading) initSBuffer() error {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_BORDER)
 	gl.TexParameterfv(gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, &[]float32{1, 1, 1, 1}[0])
 
-	gl.GenRenderbuffers(1, &r.sDepth)
-	gl.BindRenderbuffer(gl.RENDERBUFFER, r.sDepth)
-	gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution))
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, r.sDirMap, 0)
+	gl.DrawBuffer(gl.NONE)
+	gl.ReadBuffer(gl.NONE)
+	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
+		return errors.New("framebuffer failed")
+	}
 
+	gl.GenFramebuffers(1, &r.sPointBuffer)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sPointBuffer)
+
+	gl.GenTextures(1, &r.sPointMap)
+	gl.BindTexture(gl.TEXTURE_CUBE_MAP, r.sPointMap)
+	for i := 0; i < 6; i++ {
+		gl.TexImage2D(uint32(gl.TEXTURE_CUBE_MAP_POSITIVE_X+i), 0, gl.R16F, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution), 0, gl.RED, gl.FLOAT, nil)
+	}
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
+
+	gl.GenTextures(1, &r.sDepth)
+	gl.BindTexture(gl.TEXTURE_CUBE_MAP, r.sDepth)
+	for i := 0; i < 6; i++ {
+		gl.TexImage2D(uint32(gl.TEXTURE_CUBE_MAP_POSITIVE_X+i), 0, gl.DEPTH_COMPONENT, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution), 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
+	}
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
+
+	gl.FramebufferTexture(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, r.sPointMap, 0)
+	gl.FramebufferTexture(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, r.sDepth, 0)
+
+	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
+		fmt.Println(gl.CheckFramebufferStatus(gl.FRAMEBUFFER))
+		return errors.New("framebuffer failed")
+	}
+
+	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, 0)
@@ -257,10 +297,10 @@ func (r *deferredShading) blendAmbient(targetFBO uint32, camera *CameraComponent
 	shader := defaultShaders["deferred_blend_ambient"]
 	gl.UseProgram(shader.program)
 
-	gl.Uniform3fv(gl.GetUniformLocation(shader.program, gl.Str("ambient\x00")), 1, &camera.Ambient[0])
+	gl.Uniform3fv(shader.getLocation("ambient"), 1, &camera.Ambient[0])
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, r.gDiffuse)
-	gl.Uniform1i(gl.GetUniformLocation(shader.program, gl.Str("gDiffuse\x00")), 0)
+	gl.Uniform1i(shader.getLocation("gDiffuse"), 0)
 
 	gl.BindVertexArray(r.quad)
 	gl.DrawArrays(gl.TRIANGLES, 0, 6)
@@ -290,10 +330,10 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				shader = defaultShaders["deferred_dirLight"]
 				gl.UseProgram(shader.program)
 
-				gl.UniformMatrix4fv(gl.GetUniformLocation(shader.program, gl.Str("lightMatrix\x00")), 1, false, &lightMatrix[0])
+				gl.UniformMatrix4fv(shader.getLocation("lightMatrix"), 1, false, &lightMatrix[0])
 				gl.ActiveTexture(gl.TEXTURE3)
 				gl.BindTexture(gl.TEXTURE_2D, r.sDirMap)
-				gl.Uniform1i(gl.GetUniformLocation(shader.program, gl.Str("sDirMap\x00")), 3)
+				gl.Uniform1i(shader.getLocation("sDirMap"), 3)
 			}
 
 			uniform := dirLightUniform{
@@ -303,27 +343,43 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				specular:  light.Specular,
 			}
 			gl.Uniform3fv(
-				gl.GetUniformLocation(shader.program, gl.Str("dirLight.position\x00")),
+				shader.getLocation("dirLight.position"),
 				1,
 				&uniform.position[0],
 			)
 			gl.Uniform3fv(
-				gl.GetUniformLocation(shader.program, gl.Str("dirLight.direction\x00")),
+				shader.getLocation("dirLight.direction"),
 				1,
 				&uniform.direction[0],
 			)
 			gl.Uniform3fv(
-				gl.GetUniformLocation(shader.program, gl.Str("dirLight.diffuse\x00")),
+				shader.getLocation("dirLight.diffuse"),
 				1,
 				&uniform.diffuse[0],
 			)
 			gl.Uniform3fv(
-				gl.GetUniformLocation(shader.program, gl.Str("dirLight.specular\x00")),
+				shader.getLocation("dirLight.specular"),
 				1,
 				&uniform.specular[0],
 			)
 		case LIGHT_SOURCE_POINT:
-			shader = defaultShaders["deferred_pointLight_noshadow"]
+			switch light.ShadowType {
+			case LIGHT_SHADOW_TYPE_NONE:
+				shader = defaultShaders["deferred_pointLight_noshadow"]
+				gl.UseProgram(shader.program)
+			default:
+				shadowMapShader = defaultShaders["shadow_map_pointLight"]
+				err := r.generatePointLightShadowMap(shadowMapShader, light, meshes)
+				if err != nil {
+					return err
+				}
+				shader = defaultShaders["deferred_pointLight"]
+				gl.UseProgram(shader.program)
+
+				gl.ActiveTexture(gl.TEXTURE3)
+				gl.BindTexture(gl.TEXTURE_CUBE_MAP, r.sPointMap)
+				gl.Uniform1i(shader.getLocation("sPointMap"), 3)
+			}
 			gl.UseProgram(shader.program)
 
 			uniform := pointLightUniform{
@@ -333,29 +389,29 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				specular:   light.Specular,
 			}
 			gl.Uniform3fv(
-				gl.GetUniformLocation(shader.program, gl.Str("pointLight.position\x00")),
+				shader.getLocation("pointLight.position"),
 				1,
 				&uniform.position[0],
 			)
 			gl.Uniform1f(
-				gl.GetUniformLocation(shader.program, gl.Str("pointLight.range\x00")),
+				shader.getLocation("pointLight.range"),
 				uniform.lightRange,
 			)
 			gl.Uniform3fv(
-				gl.GetUniformLocation(shader.program, gl.Str("pointLight.diffuse\x00")),
+				shader.getLocation("pointLight.diffuse"),
 				1,
 				&uniform.diffuse[0],
 			)
 			gl.Uniform3fv(
-				gl.GetUniformLocation(shader.program, gl.Str("pointLight.specular\x00")),
+				shader.getLocation("pointLight.specular"),
 				1,
 				&uniform.specular[0],
 			)
 		}
 
 		cameraPos := camera.Object().Position()
-		gl.UniformMatrix3fv(gl.GetUniformLocation(
-			shader.program, gl.Str("cameraPosition\x00")),
+		gl.UniformMatrix3fv(
+			shader.getLocation("cameraPosition"),
 			1,
 			false,
 			&cameraPos[0],
@@ -363,13 +419,13 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, r.gPosition)
-		gl.Uniform1i(gl.GetUniformLocation(shader.program, gl.Str("gPosition\x00")), 0)
+		gl.Uniform1i(shader.getLocation("gPosition"), 0)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, r.gNormal)
-		gl.Uniform1i(gl.GetUniformLocation(shader.program, gl.Str("gNormal\x00")), 1)
+		gl.Uniform1i(shader.getLocation("gNormal"), 1)
 		gl.ActiveTexture(gl.TEXTURE2)
 		gl.BindTexture(gl.TEXTURE_2D, r.gDiffuse)
-		gl.Uniform1i(gl.GetUniformLocation(shader.program, gl.Str("gDiffuse\x00")), 2)
+		gl.Uniform1i(shader.getLocation("gDiffuse"), 2)
 
 		gl.BindFramebuffer(gl.FRAMEBUFFER, targetFBO)
 		gl.Enable(gl.BLEND)
@@ -383,6 +439,7 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 
 		gl.UseProgram(0)
 		gl.BindTexture(gl.TEXTURE_2D, 0)
+		gl.BindTexture(gl.TEXTURE_CUBE_MAP, 0)
 	}
 
 	return nil
@@ -390,14 +447,8 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 
 func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) (*mgl32.Mat4, error) {
 	gl.Viewport(0, 0, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution))
-	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sBuffer)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, r.sDirMap, 0)
-	gl.DrawBuffer(gl.NONE)
-	gl.ReadBuffer(gl.NONE)
-	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
-		return nil, errors.New("framebuffer failed")
-	}
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sDirBuffer)
+	gl.Clear(gl.DEPTH_BUFFER_BIT)
 
 	gl.UseProgram(shader.program)
 	lightMatrix := mgl32.Ortho(
@@ -412,7 +463,7 @@ func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, lig
 		light.Object().Position().Add(light.Object().Forward()),
 		light.Object().Up(),
 	))
-	gl.UniformMatrix4fv(gl.GetUniformLocation(shader.program, gl.Str("lightMatrix\x00")), 1, false, &lightMatrix[0])
+	gl.UniformMatrix4fv(shader.getLocation("lightMatrix"), 1, false, &lightMatrix[0])
 
 	for _, mesh := range meshes {
 		if !mesh.CastShadow {
@@ -427,7 +478,7 @@ func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, lig
 			continue
 		}
 		model := mesh.Object().ModelMatrix()
-		gl.UniformMatrix4fv(gl.GetUniformLocation(shader.program, gl.Str("model\x00")), 1, false, &model[0])
+		gl.UniformMatrix4fv(shader.getLocation("model"), 1, false, &model[0])
 		if err := r.renderer.drawMesh(rMesh); err != nil {
 			return nil, err
 		}
@@ -436,6 +487,62 @@ func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, lig
 	scrWidth, scrHeight := r.renderer.context.ScreenSize()
 	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
 	return &lightMatrix, nil
+}
+
+func (r *deferredShading) generatePointLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) error {
+	scrWidth, scrHeight := r.renderer.context.ScreenSize()
+	gl.Viewport(0, 0, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution))
+	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sPointBuffer)
+	gl.ClearColor(1, 1, 1, 1)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+	gl.UseProgram(shader.program)
+
+	lightPosition := light.Object().Position()
+	lightRange := light.Range
+
+	perspectiveMatrix := mgl32.Perspective(mgl32.DegToRad(90), 1, 0.1, light.Range)
+	lightMatrices := []mgl32.Mat4{
+		perspectiveMatrix.Mul4(mgl32.LookAtV(lightPosition, lightPosition.Add(mgl32.Vec3{1, 0, 0}), mgl32.Vec3{0, -1, 0})),
+		perspectiveMatrix.Mul4(mgl32.LookAtV(lightPosition, lightPosition.Add(mgl32.Vec3{-1, 0, 0}), mgl32.Vec3{0, -1, 0})),
+		perspectiveMatrix.Mul4(mgl32.LookAtV(lightPosition, lightPosition.Add(mgl32.Vec3{0, 1, 0}), mgl32.Vec3{0, 0, 1})),
+		perspectiveMatrix.Mul4(mgl32.LookAtV(lightPosition, lightPosition.Add(mgl32.Vec3{0, -1, 0}), mgl32.Vec3{0, 0, -1})),
+		perspectiveMatrix.Mul4(mgl32.LookAtV(lightPosition, lightPosition.Add(mgl32.Vec3{0, 0, 1}), mgl32.Vec3{0, -1, 0})),
+		perspectiveMatrix.Mul4(mgl32.LookAtV(lightPosition, lightPosition.Add(mgl32.Vec3{0, 0, -1}), mgl32.Vec3{0, -1, 0})),
+	}
+	for i := 0; i < 6; i++ {
+		gl.UniformMatrix4fv(
+			shader.getLocation(fmt.Sprintf("lightMatrices[%d]", i)),
+			1,
+			false,
+			&lightMatrices[i][0],
+		)
+	}
+
+	gl.Uniform3fv(shader.getLocation("lightPosition"), 1, &lightPosition[0])
+	gl.Uniform1f(shader.getLocation("lightRange"), lightRange)
+
+	for _, mesh := range meshes {
+		if !mesh.CastShadow {
+			continue
+		}
+		rMesh, exists := r.renderer.meshes[mesh.Mesh]
+		if !exists {
+			err := r.renderer.helpLoad(mesh.Mesh)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		model := mesh.Object().ModelMatrix()
+		gl.UniformMatrix4fv(shader.getLocation("model"), 1, false, &model[0])
+		if err := r.renderer.drawMesh(rMesh); err != nil {
+			return err
+		}
+	}
+
+	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
+	return nil
 }
 
 func (r *deferredShading) selectShader(mesh *MeshComponent) (*glShaderProgram, error) {
@@ -460,10 +567,10 @@ type deferredMeshUniform struct {
 }
 
 func (r *deferredShading) applyShaderToMesh(shader *glShaderProgram, uniform deferredMeshUniform, mesh *MeshComponent) error {
-	modelLoc := gl.GetUniformLocation(shader.program, gl.Str("model\x00"))
-	TImodelLoc := gl.GetUniformLocation(shader.program, gl.Str("TImodel\x00"))
-	viewLoc := gl.GetUniformLocation(shader.program, gl.Str("view\x00"))
-	projectionLoc := gl.GetUniformLocation(shader.program, gl.Str("projection\x00"))
+	modelLoc := shader.getLocation("model")
+	TImodelLoc := shader.getLocation("TImodel")
+	viewLoc := shader.getLocation("view")
+	projectionLoc := shader.getLocation("projection")
 	material := r.renderer.materials[mesh.Material]
 	tiModel := uniform.model.Mat3().Inv().Transpose()
 
@@ -476,17 +583,17 @@ func (r *deferredShading) applyShaderToMesh(shader *glShaderProgram, uniform def
 	gl.UniformMatrix4fv(projectionLoc, 1, false, &uniform.projection[0])
 
 	if mesh.ReceiveShader {
-		gl.Uniform1f(gl.GetUniformLocation(shader.program, gl.Str("recvShadow\x00")), 1)
+		gl.Uniform1f(shader.getLocation("recvShadow"), 1)
 	} else {
-		gl.Uniform1f(gl.GetUniformLocation(shader.program, gl.Str("recvShadow\x00")), 0)
+		gl.Uniform1f(shader.getLocation("recvShadow"), 0)
 	}
 
 	if material.diffuseMap != 0 {
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, material.diffuseMap)
-		gl.Uniform1i(gl.GetUniformLocation(shader.program, gl.Str("diffuseMap\x00")), 0)
+		gl.Uniform1i(shader.getLocation("diffuseMap"), 0)
 	} else {
-		gl.Uniform4fv(gl.GetUniformLocation(shader.program, gl.Str("color\x00")), 1, &material.DiffuseColor[0])
+		gl.Uniform4fv(shader.getLocation("color"), 1, &material.DiffuseColor[0])
 	}
 
 	return nil

@@ -70,7 +70,9 @@ func (MeshComponent) Type() int {
 const (
 	LIGHT_SOURCE_DIRECTIONAL = iota
 	LIGHT_SOURCE_POINT
+)
 
+const (
 	LIGHT_SHADOW_TYPE_NONE = iota
 	LIGHT_SHADOW_TYPE_SOFT
 	LIGHT_SHADOW_TYPE_HARD
