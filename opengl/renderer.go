@@ -21,7 +21,9 @@ type renderer struct {
 	materials map[string]*glMaterial
 	programs  map[string]*glShaderProgram
 
-	shadowMapResolution int
+	dirLightShadowMapResolution   int
+	pointLightShadowMapResolution int
+	spotLightShadowMapResolution  int
 
 	pc renderPath
 
@@ -34,11 +36,13 @@ type renderer struct {
 
 func newRenderer() *renderer {
 	r := &renderer{
-		meshes:              map[string]*glMesh{},
-		materials:           map[string]*glMaterial{},
-		programs:            map[string]*glShaderProgram{},
-		shadowMapResolution: 2048,
-		assetsToInstall:     []string{},
+		meshes:                        map[string]*glMesh{},
+		materials:                     map[string]*glMaterial{},
+		programs:                      map[string]*glShaderProgram{},
+		dirLightShadowMapResolution:   3072,
+		pointLightShadowMapResolution: 512,
+		spotLightShadowMapResolution:  1024,
+		assetsToInstall:               []string{},
 	}
 	//r.pc = &forwardShading{renderer: r}
 	r.pc = &deferredShading{renderer: r}

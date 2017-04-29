@@ -543,8 +543,6 @@ var defaultShaders = map[string]*glShaderProgram{
 		uniform sampler2D gDiffuse;
 		uniform samplerCube sPointMap;
 
-		uniform vec3 ambient;
-
 		uniform PointLight pointLight;
 
 		uniform vec3 cameraPosition;
@@ -609,8 +607,6 @@ var defaultShaders = map[string]*glShaderProgram{
 		uniform sampler2D gNormal;
 		uniform sampler2D gDiffuse;
 
-		uniform vec3 ambient;
-
 		uniform PointLight pointLight;
 
 		uniform vec3 cameraPosition;
@@ -636,6 +632,144 @@ var defaultShaders = map[string]*glShaderProgram{
 
 		void main() {
 			color = vec4(calculatePointLight(pointLight), 1.0);
+		}
+	`,
+	},
+
+	"deferred_spotLight": {
+		vertexSource: `
+		#version 410 core
+
+		layout (location = 0) in vec3 position;
+		layout (location = 1) in vec2 uv;
+
+		out vec2 vs_uv;
+
+		void main() {
+			vs_uv = uv;
+			gl_Position = vec4(position, 1.0);
+		}
+	`,
+		fragmentSource: `
+		#version 410 core
+
+		struct SpotLight {
+			vec3 position;
+			vec3 direction;
+			float cosAngle;
+			float range;
+			vec3 diffuse;
+			vec3 specular;
+		};
+
+		in vec2 vs_uv;
+
+		uniform mat4 lightMatrix;
+		uniform sampler2D gPosition;
+		uniform sampler2D gNormal;
+		uniform sampler2D gDiffuse;
+		uniform sampler2D sSpotMap;
+
+		uniform SpotLight spotLight;
+
+		uniform vec3 cameraPosition;
+
+		out vec4 color;
+
+		vec3 calculateSpotLight(SpotLight light) {
+			vec3 meshDiffuse = texture(gDiffuse, vs_uv).rgb;
+			vec3 vs_fragPosition = texture(gPosition, vs_uv).rgb;
+			vec3 vs_normal = texture(gNormal, vs_uv).rgb;
+
+			vec3 viewDirection = normalize(vs_fragPosition - cameraPosition);
+			vec3 lightDirection = vs_fragPosition - light.position;
+			vec3 halfDirection = -normalize(viewDirection + lightDirection);
+			float distance = length(lightDirection);
+			float attenuation = max(1 - distance / light.range, 0.0);
+
+			vec3 lightDirection_n = normalize(lightDirection);
+			float inAngle = dot(lightDirection_n, normalize(light.direction)) > light.cosAngle ? 1.0 : 0.0;
+
+			vec4 fragLightPos = lightMatrix * vec4(vs_fragPosition, 1.0);
+			vec3 projPos = fragLightPos.xyz / fragLightPos.w;
+			projPos = projPos * 0.5 + 0.5;
+			float recvShadow = texture(gDiffuse, vs_uv).a;
+			float currentDepth = distance / light.range;
+			float closetDepth = texture(sSpotMap, projPos.xy).r;
+			float shadow = currentDepth - 0.005 > closetDepth ? 1.0 : 0.0;
+
+			vec3 diffuse = light.diffuse * max(dot(normalize(vs_normal), -lightDirection_n), 0.0) * meshDiffuse;
+			vec3 specular = light.specular * pow(max(dot(vs_normal, halfDirection), 0.0), 32) * vec3(1.0, 1.0, 1.0);
+
+			return (1.0 - recvShadow * shadow) * inAngle * attenuation * (diffuse + specular);
+		}
+
+		void main() {
+			color = vec4(calculateSpotLight(spotLight), 1.0);
+		}
+	`,
+	},
+
+	"deferred_spotLight_noshadow": {
+		vertexSource: `
+		#version 410 core
+
+		layout (location = 0) in vec3 position;
+		layout (location = 1) in vec2 uv;
+
+		out vec2 vs_uv;
+
+		void main() {
+			vs_uv = uv;
+			gl_Position = vec4(position, 1.0);
+		}
+	`,
+		fragmentSource: `
+		#version 410 core
+
+		struct SpotLight {
+			vec3 position;
+			vec3 direction;
+			float cosAngle;
+			float range;
+			vec3 diffuse;
+			vec3 specular;
+		};
+
+		in vec2 vs_uv;
+
+		uniform sampler2D gPosition;
+		uniform sampler2D gNormal;
+		uniform sampler2D gDiffuse;
+
+		uniform SpotLight spotLight;
+
+		uniform vec3 cameraPosition;
+
+		out vec4 color;
+
+		vec3 calculateSpotLight(SpotLight light) {
+			vec3 meshDiffuse = texture(gDiffuse, vs_uv).rgb;
+			vec3 vs_fragPosition = texture(gPosition, vs_uv).rgb;
+			vec3 vs_normal = texture(gNormal, vs_uv).rgb;
+
+			vec3 viewDirection = normalize(vs_fragPosition - cameraPosition);
+			vec3 lightDirection = vs_fragPosition - light.position;
+			vec3 halfDirection = -normalize(viewDirection + lightDirection);
+			float distance = length(lightDirection);
+			float attenuation = max(1 - distance / light.range, 0.0);
+
+			vec3 lightDirection_n = normalize(lightDirection);
+			float inAngle = dot(lightDirection_n, normalize(light.direction)) > light.cosAngle ? 1.0 : 0.0;
+
+			vec3 diffuse = light.diffuse * max(dot(normalize(vs_normal), -lightDirection_n), 0.0) * meshDiffuse;
+			vec3 specular = light.specular * pow(max(dot(vs_normal, halfDirection), 0.0), 32) * vec3(1.0, 1.0, 1.0);
+
+			return inAngle * attenuation * (diffuse + specular);
+		}
+
+		void main() {
+			color = vec4(calculateSpotLight(spotLight), 1.0);
 		}
 	`,
 	},
@@ -697,6 +831,38 @@ var defaultShaders = map[string]*glShaderProgram{
 			}
 		}
 		
+	`,
+		fragmentSource: `
+		#version 410 core
+
+		in vec3 fragPosition;
+
+		uniform vec3 lightPosition;
+		uniform float lightRange;
+
+		out float distance;
+
+		void main() {
+			distance = length(fragPosition - lightPosition) / lightRange;
+		}
+	`,
+	},
+
+	"shadow_map_spotLight": {
+		vertexSource: `
+		#version 410 core
+
+		layout (location = 0) in vec3 position;
+
+		uniform mat4 lightMatrix;
+		uniform mat4 model;
+
+		out vec3 fragPosition;
+
+		void main() {
+			fragPosition = vec3(model * vec4(position, 1.0));
+			gl_Position = lightMatrix * vec4(fragPosition, 1.0);
+		}
 	`,
 		fragmentSource: `
 		#version 410 core

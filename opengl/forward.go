@@ -168,6 +168,15 @@ type pointLightUniform struct {
 	specular   mgl32.Vec3
 }
 
+type spotLightUniform struct {
+	position   mgl32.Vec3
+	direction  mgl32.Vec3
+	cosAngle   float32
+	lightRange float32
+	diffuse    mgl32.Vec3
+	specular   mgl32.Vec3
+}
+
 type forwardMeshUniform struct {
 	projection, model, view mgl32.Mat4
 

@@ -70,6 +70,7 @@ func (MeshComponent) Type() int {
 const (
 	LIGHT_SOURCE_DIRECTIONAL = iota
 	LIGHT_SOURCE_POINT
+	LIGHT_SOURCE_SPOT
 )
 
 const (
@@ -86,8 +87,11 @@ type LightComponent struct {
 	Diffuse  mgl32.Vec3
 	Specular mgl32.Vec3
 
-	// point light only
+	// point light & spot light
 	Range float32
+
+	// spot light
+	Angle float32
 
 	componentBase
 }

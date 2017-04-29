@@ -1,13 +1,13 @@
 package main
 
 import (
+	"flag"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/wxdao/wengine"
 	_ "github.com/wxdao/wengine/opengl"
+	"log"
 	"os"
 	"path"
-	"flag"
-	"log"
 	"runtime/pprof"
 )
 
@@ -32,7 +32,7 @@ func main() {
 		Height:      600,
 		WindowMode:  wengine.WINDOW_MODE_WINDOWED,
 		WindowTitle: "wEngine Example: cube",
-		FrameLimit:  60,
+		FrameLimit:  30,
 		Renderer:    "opengl",
 	}
 	app, _ := wengine.NewApp(config)
@@ -61,8 +61,8 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	dirLight := &wengine.LightComponent{}
 	dirLight.LightSource = wengine.LIGHT_SOURCE_DIRECTIONAL
 	dirLight.ShadowType = wengine.LIGHT_SHADOW_TYPE_HARD
-	dirLight.Diffuse = mgl32.Vec3{1, 1, 1}
-	dirLight.Specular = mgl32.Vec3{0.5, 0.5, 0.5}
+	dirLight.Diffuse = mgl32.Vec3{0.5, 0.5, 0.5}
+	dirLight.Specular = mgl32.Vec3{0.1, 0.1, 0.1}
 	dirLightObject := wengine.NewObject()
 	dirLightObject.Translate(mgl32.Vec3{0, 10, 10})
 	dirLightObject.Rotate(mgl32.DegToRad(-90), mgl32.Vec3{1, 0, 0})
@@ -77,34 +77,24 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	pointLight.Diffuse = mgl32.Vec3{1, 1, 1}
 	pointLight.Specular = mgl32.Vec3{0.5, 0.5, 0.5}
 	pointLightObject := wengine.NewObject()
-	pointLightObject.Translate(mgl32.Vec3{0, 10, -5})
+	pointLightObject.Translate(mgl32.Vec3{5, 8, -5})
 	pointLightObject.AttachComponent(pointLight)
-	pointLightObject.SetEnabled(true)
+	pointLightObject.SetEnabled(false)
 	scene.RegisterObject("pointLight", pointLightObject)
 
-	pointLight2 := &wengine.LightComponent{}
-	pointLight2.LightSource = wengine.LIGHT_SOURCE_POINT
-	pointLight2.ShadowType = wengine.LIGHT_SHADOW_TYPE_HARD
-	pointLight2.Range = 20
-	pointLight2.Diffuse = mgl32.Vec3{1, 1, 1}
-	pointLight2.Specular = mgl32.Vec3{0.5, 0.5, 0.5}
-	pointLightObject2 := wengine.NewObject()
-	pointLightObject2.Translate(mgl32.Vec3{5, 10, -5})
-	pointLightObject2.AttachComponent(pointLight2)
-	pointLightObject2.SetEnabled(true)
-	scene.RegisterObject("pointLight2", pointLightObject2)
-
-	pointLight3 := &wengine.LightComponent{}
-	pointLight3.LightSource = wengine.LIGHT_SOURCE_POINT
-	pointLight3.ShadowType = wengine.LIGHT_SHADOW_TYPE_HARD
-	pointLight3.Range = 20
-	pointLight3.Diffuse = mgl32.Vec3{1, 1, 1}
-	pointLight3.Specular = mgl32.Vec3{0.5, 0.5, 0.5}
-	pointLightObject3 := wengine.NewObject()
-	pointLightObject3.Translate(mgl32.Vec3{-5, 10, -5})
-	pointLightObject3.AttachComponent(pointLight3)
-	pointLightObject3.SetEnabled(true)
-	scene.RegisterObject("pointLight3", pointLightObject3)
+	spotLight := &wengine.LightComponent{}
+	spotLight.LightSource = wengine.LIGHT_SOURCE_SPOT
+	spotLight.ShadowType = wengine.LIGHT_SHADOW_TYPE_HARD
+	spotLight.Angle = mgl32.DegToRad(30)
+	spotLight.Range = 25
+	spotLight.Diffuse = mgl32.Vec3{10, 10, 10}
+	spotLight.Specular = mgl32.Vec3{1, 1, 1}
+	spotLightObject := wengine.NewObject()
+	spotLightObject.Translate(mgl32.Vec3{0, 20, -5})
+	spotLightObject.Rotate(mgl32.DegToRad(-90), mgl32.Vec3{1, 0, 0})
+	spotLightObject.AttachComponent(spotLight)
+	spotLightObject.SetEnabled(true)
+	scene.RegisterObject("spotLight", spotLightObject)
 
 	cubeMesh := wengine.DefaultCubeAsset()
 	context.RegisterAsset("cubeMesh", cubeMesh)

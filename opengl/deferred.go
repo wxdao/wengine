@@ -6,6 +6,7 @@ import (
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/go-gl/mathgl/mgl32"
 	. "github.com/wxdao/wengine"
+	"math"
 )
 
 type deferredShading struct {
@@ -21,7 +22,10 @@ type deferredShading struct {
 	sDirMap      uint32
 	sPointBuffer uint32
 	sPointMap    uint32
-	sDepth       uint32
+	sPointDepth  uint32
+	sSpotBuffer  uint32
+	sSpotMap     uint32
+	sSpotDepth   uint32
 
 	quad uint32
 }
@@ -88,12 +92,13 @@ func (r *deferredShading) initGBuffer() error {
 }
 
 func (r *deferredShading) initSBuffer() error {
+	// directional light
 	gl.GenFramebuffers(1, &r.sDirBuffer)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sDirBuffer)
 
 	gl.GenTextures(1, &r.sDirMap)
 	gl.BindTexture(gl.TEXTURE_2D, r.sDirMap)
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution), 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, int32(r.renderer.dirLightShadowMapResolution), int32(r.renderer.dirLightShadowMapResolution), 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_BORDER)
@@ -107,13 +112,37 @@ func (r *deferredShading) initSBuffer() error {
 		return errors.New("framebuffer failed")
 	}
 
+	// spot light
+	gl.GenFramebuffers(1, &r.sSpotBuffer)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sSpotBuffer)
+
+	gl.GenTextures(1, &r.sSpotMap)
+	gl.BindTexture(gl.TEXTURE_2D, r.sSpotMap)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.R32F, int32(r.renderer.spotLightShadowMapResolution), int32(r.renderer.spotLightShadowMapResolution), 0, gl.RED, gl.FLOAT, nil)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_BORDER)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_BORDER)
+	gl.TexParameterfv(gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, &[]float32{1, 1, 1, 1}[0])
+
+	gl.GenRenderbuffers(1, &r.sSpotDepth)
+	gl.BindRenderbuffer(gl.RENDERBUFFER, r.sSpotDepth)
+	gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT, int32(r.renderer.spotLightShadowMapResolution), int32(r.renderer.spotLightShadowMapResolution))
+
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, r.sSpotMap, 0)
+	gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, r.sSpotDepth)
+	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
+		return errors.New("framebuffer failed")
+	}
+
+	// point light
 	gl.GenFramebuffers(1, &r.sPointBuffer)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sPointBuffer)
 
 	gl.GenTextures(1, &r.sPointMap)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, r.sPointMap)
 	for i := 0; i < 6; i++ {
-		gl.TexImage2D(uint32(gl.TEXTURE_CUBE_MAP_POSITIVE_X+i), 0, gl.R16F, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution), 0, gl.RED, gl.FLOAT, nil)
+		gl.TexImage2D(uint32(gl.TEXTURE_CUBE_MAP_POSITIVE_X+i), 0, gl.R16F, int32(r.renderer.pointLightShadowMapResolution), int32(r.renderer.pointLightShadowMapResolution), 0, gl.RED, gl.FLOAT, nil)
 	}
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
@@ -121,10 +150,10 @@ func (r *deferredShading) initSBuffer() error {
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
 
-	gl.GenTextures(1, &r.sDepth)
-	gl.BindTexture(gl.TEXTURE_CUBE_MAP, r.sDepth)
+	gl.GenTextures(1, &r.sPointDepth)
+	gl.BindTexture(gl.TEXTURE_CUBE_MAP, r.sPointDepth)
 	for i := 0; i < 6; i++ {
-		gl.TexImage2D(uint32(gl.TEXTURE_CUBE_MAP_POSITIVE_X+i), 0, gl.DEPTH_COMPONENT, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution), 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
+		gl.TexImage2D(uint32(gl.TEXTURE_CUBE_MAP_POSITIVE_X+i), 0, gl.DEPTH_COMPONENT, int32(r.renderer.pointLightShadowMapResolution), int32(r.renderer.pointLightShadowMapResolution), 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
 	}
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
@@ -133,7 +162,7 @@ func (r *deferredShading) initSBuffer() error {
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
 
 	gl.FramebufferTexture(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, r.sPointMap, 0)
-	gl.FramebufferTexture(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, r.sDepth, 0)
+	gl.FramebufferTexture(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, r.sPointDepth, 0)
 
 	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
 		fmt.Println(gl.CheckFramebufferStatus(gl.FRAMEBUFFER))
@@ -380,7 +409,6 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				gl.BindTexture(gl.TEXTURE_CUBE_MAP, r.sPointMap)
 				gl.Uniform1i(shader.getLocation("sPointMap"), 3)
 			}
-			gl.UseProgram(shader.program)
 
 			uniform := pointLightUniform{
 				position:   light.Object().Position(),
@@ -407,6 +435,65 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				1,
 				&uniform.specular[0],
 			)
+		case LIGHT_SOURCE_SPOT:
+			switch light.ShadowType {
+			case LIGHT_SHADOW_TYPE_NONE:
+				shader = defaultShaders["deferred_spotLight_noshadow"]
+				gl.UseProgram(shader.program)
+			default:
+				shadowMapShader = defaultShaders["shadow_map_spotLight"]
+				lightMatrix, err := r.generateSpotLightShadowMap(shadowMapShader, light, meshes)
+				if err != nil {
+					return err
+				}
+				shader = defaultShaders["deferred_spotLight"]
+				gl.UseProgram(shader.program)
+
+				gl.UniformMatrix4fv(shader.getLocation("lightMatrix"), 1, false, &lightMatrix[0])
+				gl.ActiveTexture(gl.TEXTURE3)
+				gl.BindTexture(gl.TEXTURE_2D, r.sSpotMap)
+				gl.Uniform1i(shader.getLocation("sSpotMap"), 3)
+			}
+
+			uniform := spotLightUniform{
+				position:   light.Object().Position(),
+				direction:  light.Object().Forward(),
+				cosAngle:   float32(math.Cos(float64(light.Angle / 2))),
+				lightRange: light.Range,
+				diffuse:    light.Diffuse,
+				specular:   light.Specular,
+			}
+			gl.Uniform3fv(
+				shader.getLocation("spotLight.position"),
+				1,
+				&uniform.position[0],
+			)
+			gl.Uniform3fv(
+				shader.getLocation("spotLight.direction"),
+				1,
+				&uniform.direction[0],
+			)
+			gl.Uniform1f(
+				shader.getLocation("spotLight.cosAngle"),
+				uniform.cosAngle,
+			)
+			gl.Uniform1f(
+				shader.getLocation("spotLight.range"),
+				uniform.lightRange,
+			)
+			gl.Uniform3fv(
+				shader.getLocation("spotLight.diffuse"),
+				1,
+				&uniform.diffuse[0],
+			)
+			gl.Uniform3fv(
+				shader.getLocation("spotLight.specular"),
+				1,
+				&uniform.specular[0],
+			)
+		}
+		if shader == nil {
+			return errors.New("no available shader")
 		}
 
 		cameraPos := camera.Object().Position()
@@ -446,7 +533,7 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 }
 
 func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) (*mgl32.Mat4, error) {
-	gl.Viewport(0, 0, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution))
+	gl.Viewport(0, 0, int32(r.renderer.dirLightShadowMapResolution), int32(r.renderer.dirLightShadowMapResolution))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sDirBuffer)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
 
@@ -490,8 +577,7 @@ func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, lig
 }
 
 func (r *deferredShading) generatePointLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) error {
-	scrWidth, scrHeight := r.renderer.context.ScreenSize()
-	gl.Viewport(0, 0, int32(r.renderer.shadowMapResolution), int32(r.renderer.shadowMapResolution))
+	gl.Viewport(0, 0, int32(r.renderer.pointLightShadowMapResolution), int32(r.renderer.pointLightShadowMapResolution))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sPointBuffer)
 	gl.ClearColor(1, 1, 1, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -541,8 +627,54 @@ func (r *deferredShading) generatePointLightShadowMap(shader *glShaderProgram, l
 		}
 	}
 
+	scrWidth, scrHeight := r.renderer.context.ScreenSize()
 	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
 	return nil
+}
+
+func (r *deferredShading) generateSpotLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) (*mgl32.Mat4, error) {
+	gl.Viewport(0, 0, int32(r.renderer.spotLightShadowMapResolution), int32(r.renderer.spotLightShadowMapResolution))
+	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sSpotBuffer)
+	gl.ClearColor(1, 1, 1, 1)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+	gl.UseProgram(shader.program)
+
+	lightPosition := light.Object().Position()
+	lightRange := light.Range
+
+	lightMatrix := mgl32.Perspective(light.Angle, 1, 0.1, light.Range).Mul4(mgl32.LookAtV(
+		lightPosition,
+		lightPosition.Add(light.Object().Forward()),
+		light.Object().Up(),
+	))
+	gl.UniformMatrix4fv(shader.getLocation("lightMatrix"), 1, false, &lightMatrix[0])
+
+	gl.Uniform3fv(shader.getLocation("lightPosition"), 1, &lightPosition[0])
+	gl.Uniform1f(shader.getLocation("lightRange"), lightRange)
+
+	for _, mesh := range meshes {
+		if !mesh.CastShadow {
+			continue
+		}
+		rMesh, exists := r.renderer.meshes[mesh.Mesh]
+		if !exists {
+			err := r.renderer.helpLoad(mesh.Mesh)
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
+		model := mesh.Object().ModelMatrix()
+		gl.UniformMatrix4fv(shader.getLocation("model"), 1, false, &model[0])
+		if err := r.renderer.drawMesh(rMesh); err != nil {
+			return nil, err
+		}
+	}
+
+	scrWidth, scrHeight := r.renderer.context.ScreenSize()
+	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
+	return &lightMatrix, nil
 }
 
 func (r *deferredShading) selectShader(mesh *MeshComponent) (*glShaderProgram, error) {
