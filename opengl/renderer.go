@@ -343,7 +343,7 @@ func (p *glShaderProgram) install() error {
 func (p *glShaderProgram) getLocation(name string) int32 {
 	location, exists := p.locations[name]
 	if !exists {
-		location = gl.GetUniformLocation(p.program, gl.Str(name + "\x00"))
+		location = gl.GetUniformLocation(p.program, gl.Str(name+"\x00"))
 		p.locations[name] = location
 	}
 	return location

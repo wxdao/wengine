@@ -6,9 +6,27 @@ import (
 	_ "github.com/wxdao/wengine/opengl"
 	"os"
 	"path"
+	"flag"
+	"log"
+	"runtime/pprof"
 )
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile `file`")
+var texfile = flag.String("tex", "", "texture file for cube `file`")
+
 func main() {
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	config := &wengine.Config{
 		Width:       800,
 		Height:      600,
@@ -96,7 +114,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	context.RegisterAsset("cubeColorMaterial", cubeColorMaterial)
 
 	cubeMaterial := &wengine.MaterialAsset{}
-	if len(os.Args) < 2 {
+	if *texfile == "" {
 		exe, err := os.Executable()
 		if err != nil {
 			cubeMaterial.DiffuseMapPath = "cube.png"
@@ -104,7 +122,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 			cubeMaterial.DiffuseMapPath = path.Join(path.Dir(exe), "cube.png")
 		}
 	} else {
-		cubeMaterial.DiffuseMapPath = os.Args[1]
+		cubeMaterial.DiffuseMapPath = *texfile
 	}
 	context.RegisterAsset("cubeMaterial", cubeMaterial)
 
