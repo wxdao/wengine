@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"runtime/pprof"
+	"math"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile `file`")
@@ -44,6 +45,21 @@ func main() {
 }
 
 func setupScene(context *wengine.Context, scene *wengine.Scene) {
+	context.Input().BindAxis("angle", wengine.AxisMeta{
+		Source:      wengine.AXIS_SOURCE_KEY,
+		PositiveKey: "w",
+		NegativeKey: "s",
+		Gravity:     0.5,
+		Sensitivity: 0.5,
+	})
+	context.Input().BindAxis("intensity", wengine.AxisMeta{
+		Source:      wengine.AXIS_SOURCE_KEY,
+		PositiveKey: "e",
+		NegativeKey: "d",
+		Gravity:     0.5,
+		Sensitivity: 0.5,
+	})
+
 	camera := &wengine.CameraComponent{}
 	camera.Mode = wengine.CAMERA_MODE_PERSPECTIVE
 	camera.FOV = mgl32.DegToRad(60)
@@ -53,6 +69,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	camera.Ambient = mgl32.Vec3{0.2, 0.2, 0.2}
 	cameraObject := wengine.NewObject()
 	cameraObject.Translate(mgl32.Vec3{0, 0, 10})
+	cameraObject.SetBehavior(&CameraBehavior{})
 	cameraObject.AttachComponent(camera)
 	cameraObject.SetEnabled(true)
 	scene.RegisterObject("mainCamera", cameraObject)
@@ -163,4 +180,17 @@ func (b *CubeBehavior) Start(bctx *wengine.BehaviorContext) {
 
 func (b *CubeBehavior) Update(bctx *wengine.BehaviorContext) {
 	bctx.Object.Rotate(0.3*float32(bctx.DeltaTime), b.axis)
+}
+
+type CameraBehavior struct {
+	spotLight *wengine.LightComponent
+}
+
+func (b *CameraBehavior) Start(bctx *wengine.BehaviorContext) {
+	b.spotLight = bctx.Context.CurrentScene().Objects()["spotLight"].Components()[wengine.COMPO_LIGHT].(*wengine.LightComponent)
+}
+
+func (b *CameraBehavior) Update(bctx *wengine.BehaviorContext) {
+	b.spotLight.Angle = mgl32.DegToRad(float32(25 + 10*bctx.Context.Input().GetAxis("angle")))
+	b.spotLight.Diffuse = mgl32.Vec3{1, 1, 1}.Mul(float32(math.Max(5, 10+30*bctx.Context.Input().GetAxis("intensity"))))
 }

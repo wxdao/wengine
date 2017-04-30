@@ -18,6 +18,8 @@ type Context struct {
 	rendererName    string
 	rendererSetting RendererSetting
 
+	input *Input
+
 	assetsToFinalize AssetMap
 }
 
@@ -26,7 +28,11 @@ func NewContext() *Context {
 	if !exists {
 		return nil
 	}
-	return &Context{assets: make(AssetMap), scenes: make(SceneMap), renderer: renderer, rendererName: "opengl"}
+	return &Context{assets: make(AssetMap), scenes: make(SceneMap), renderer: renderer, rendererName: "opengl", input: newInput()}
+}
+
+func (ctx *Context) Input() *Input {
+	return ctx.input
 }
 
 func (ctx *Context) AccessRenderSetting() *RendererSetting {
@@ -49,6 +55,10 @@ func (ctx *Context) RegisterAsset(name string, asset Asset) {
 
 func (ctx *Context) RegisterScene(name string, scene *Scene) {
 	ctx.scenes[name] = scene
+}
+
+func (ctx *Context) CurrentScene() *Scene {
+	return ctx.currentScene
 }
 
 func (ctx *Context) ApplyScene(name string) {
