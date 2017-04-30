@@ -15,13 +15,18 @@ type Context struct {
 	currentScene *Scene
 
 	renderer        Renderer
+	rendererName    string
 	rendererSetting RendererSetting
 
 	assetsToFinalize AssetMap
 }
 
 func NewContext() *Context {
-	return &Context{assets: make(AssetMap), scenes: make(SceneMap)}
+	renderer, exists := registeredRenderers["opengl"]
+	if !exists {
+		return nil
+	}
+	return &Context{assets: make(AssetMap), scenes: make(SceneMap), renderer: renderer, rendererName: "opengl"}
 }
 
 func (ctx *Context) AccessRenderSetting() *RendererSetting {

@@ -33,7 +33,6 @@ func main() {
 		WindowMode:  wengine.WINDOW_MODE_WINDOWED,
 		WindowTitle: "wEngine Example: cube",
 		FrameLimit:  30,
-		Renderer:    "opengl",
 	}
 	app, _ := wengine.NewApp(config)
 	context := app.Context()
@@ -61,8 +60,8 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	dirLight := &wengine.LightComponent{}
 	dirLight.LightSource = wengine.LIGHT_SOURCE_DIRECTIONAL
 	dirLight.ShadowType = wengine.LIGHT_SHADOW_TYPE_HARD
-	dirLight.Diffuse = mgl32.Vec3{0.5, 0.5, 0.5}
-	dirLight.Specular = mgl32.Vec3{0.1, 0.1, 0.1}
+	dirLight.Diffuse = mgl32.Vec3{0.8, 0.8, 0.8}
+	dirLight.Specular = mgl32.Vec3{0.2, 0.2, 0.2}
 	dirLightObject := wengine.NewObject()
 	dirLightObject.Translate(mgl32.Vec3{0, 10, 10})
 	dirLightObject.Rotate(mgl32.DegToRad(-90), mgl32.Vec3{1, 0, 0})
@@ -72,7 +71,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 
 	pointLight := &wengine.LightComponent{}
 	pointLight.LightSource = wengine.LIGHT_SOURCE_POINT
-	pointLight.ShadowType = wengine.LIGHT_SHADOW_TYPE_HARD
+	pointLight.ShadowType = wengine.LIGHT_SHADOW_TYPE_NONE
 	pointLight.Range = 20
 	pointLight.Diffuse = mgl32.Vec3{1, 1, 1}
 	pointLight.Specular = mgl32.Vec3{0.5, 0.5, 0.5}

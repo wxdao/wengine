@@ -19,13 +19,9 @@ type Config struct {
 	WindowMode    int
 	WindowTitle   string
 	FrameLimit    int
-	Renderer      string
 }
 
 type App struct {
-	renderer     Renderer
-	rendererName string
-
 	width, height int
 	winMode       int
 	title         string
@@ -40,23 +36,16 @@ type App struct {
 }
 
 func NewApp(config *Config) (*App, error) {
-	renderer, exists := registeredRenderers[config.Renderer]
-	if !exists {
-		return nil, errors.New("no available renderer")
-	}
 	if config.Context == nil {
 		config.Context = NewContext()
 	}
-	config.Context.renderer = renderer
 	return &App{
-		renderer:     renderer,
-		rendererName: config.Renderer,
-		width:        config.Width,
-		height:       config.Height,
-		title:        config.WindowTitle,
-		winMode:      config.WindowMode,
-		frameLimit:   config.FrameLimit,
-		context:      config.Context,
+		width:      config.Width,
+		height:     config.Height,
+		title:      config.WindowTitle,
+		winMode:    config.WindowMode,
+		frameLimit: config.FrameLimit,
+		context:    config.Context,
 	}, nil
 }
 
@@ -65,7 +54,7 @@ func (a *App) Context() *Context {
 }
 
 func (a *App) Run() error {
-	switch a.rendererName {
+	switch a.context.rendererName {
 	case "opengl":
 		return a.runOpenGL()
 	default:
@@ -109,11 +98,11 @@ func (a *App) runOpenGL() error {
 	scrWidth, scrHeight := window.GetFramebufferSize()
 	a.context.SetScreenSize(scrWidth, scrHeight)
 
-	if err := a.renderer.Init(a.context); err != nil {
+	if err := a.context.renderer.Init(a.context); err != nil {
 		return err
 	}
 
-	fmt.Println("OpenGL version", a.renderer.Version())
+	fmt.Println("OpenGL version", a.context.renderer.Version())
 
 	glfw.SwapInterval(1)
 
@@ -141,7 +130,7 @@ func (a *App) runOpenGL() error {
 		a.lastScene = currentScene
 
 		currentScene.updateTransforms()
-		err := a.renderer.Render(currentScene)
+		err := a.context.renderer.Render(currentScene)
 		if err != nil {
 			return err
 		}
