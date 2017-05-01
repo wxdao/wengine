@@ -54,11 +54,6 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 		Gravity:     0.5,
 		Sensitivity: 0.5,
 	})
-	context.Input().BindAxis("angle", wengine.AxisMeta{
-		Source:      wengine.AXIS_SOURCE_MOUSE,
-		From:        wengine.AXIS_FROM_Y,
-		Sensitivity: 0.001,
-	})
 	context.Input().BindAxis("intensity", wengine.AxisMeta{
 		Source:      wengine.AXIS_SOURCE_KEY,
 		PositiveKey: "e",
@@ -66,9 +61,15 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 		Gravity:     0.5,
 		Sensitivity: 0.5,
 	})
-	context.Input().BindAxis("intensity", wengine.AxisMeta{
+
+	context.Input().BindAxis("mouse x", wengine.AxisMeta{
 		Source:      wengine.AXIS_SOURCE_MOUSE,
 		From:        wengine.AXIS_FROM_X,
+		Sensitivity: 0.001,
+	})
+	context.Input().BindAxis("mouse y", wengine.AxisMeta{
+		Source:      wengine.AXIS_SOURCE_MOUSE,
+		From:        wengine.AXIS_FROM_Y,
 		Sensitivity: 0.001,
 	})
 
@@ -146,7 +147,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 
 	cubeObject1 := wengine.NewObject()
 	cubeObject1.Translate(mgl32.Vec3{0, 0, -5})
-	cubeObject1.SetBehavior(&CubeBehavior{axis: mgl32.Vec3{1, 1, 1}})
+	cubeObject1.SetBehavior(&ControlledRotationBehavior{})
 	cubeObject1.AttachComponent(&wengine.MeshComponent{
 		Mesh:          "cubeMesh",
 		Material:      "cubeMaterial",
@@ -159,7 +160,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	cubeObject2 := wengine.NewObject()
 	cubeObject2.SetParent(cubeObject1)
 	cubeObject2.Translate(mgl32.Vec3{5, 0, 0})
-	cubeObject2.SetBehavior(&CubeBehavior{axis: mgl32.Vec3{0, 1, 0}})
+	cubeObject2.SetBehavior(&RotationBehavior{axis: mgl32.Vec3{1, 1, 1}})
 	cubeObject2.AttachComponent(&wengine.MeshComponent{
 		Mesh:          "cubeMesh",
 		Material:      "cubeMaterial",
@@ -182,16 +183,26 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	scene.RegisterObject("simpleCube3", cubeObject3)
 }
 
-type CubeBehavior struct {
+type RotationBehavior struct {
 	axis  mgl32.Vec3
-	asset wengine.MaterialAsset
 }
 
-func (b *CubeBehavior) Start(bctx *wengine.BehaviorContext) {
+func (b *RotationBehavior) Start(bctx *wengine.BehaviorContext) {
 }
 
-func (b *CubeBehavior) Update(bctx *wengine.BehaviorContext) {
+func (b *RotationBehavior) Update(bctx *wengine.BehaviorContext) {
 	bctx.Object.Rotate(0.3*float32(bctx.DeltaTime), b.axis)
+}
+
+type ControlledRotationBehavior struct {
+}
+
+func (b *ControlledRotationBehavior) Start(bctx *wengine.BehaviorContext) {
+}
+
+func (b *ControlledRotationBehavior) Update(bctx *wengine.BehaviorContext) {
+	bctx.Object.Rotate(float32(bctx.Context.Input().GetAxis("mouse y")), mgl32.Vec3{1, 0, 0})
+	bctx.Object.Rotate(float32(bctx.Context.Input().GetAxis("mouse x")), mgl32.Vec3{0, 1, 0})
 }
 
 type CameraBehavior struct {
