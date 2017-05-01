@@ -129,13 +129,23 @@ func (i *Input) BindAxis(axis string, meta AxisMeta) {
 	i.axisValue[&meta] = 0
 }
 
+func (i *Input) ResetAxis(axis string) {
+	for _, meta := range i.axes[axis] {
+		delete(i.axisValue, meta)
+	}
+	delete(i.axes, axis)
+}
+
 func (i *Input) GetAxis(axis string) (final float64) {
 	metas, exists := i.axes[axis]
 	if !exists {
 		return
 	}
 	for _, meta := range metas {
-		final += i.axisValue[meta]
+		if math.Abs(i.axisValue[meta]) >= math.Abs(final) {
+			final = i.axisValue[meta]
+		}
 	}
+
 	return
 }
