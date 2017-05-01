@@ -35,7 +35,7 @@ func main() {
 		Height:      600,
 		WindowMode:  wengine.WINDOW_MODE_WINDOWED,
 		WindowTitle: "wEngine Example: cube",
-		FrameLimit:  50,
+		FrameLimit:  30,
 	}
 	app, _ = wengine.NewApp(config)
 	context := app.Context()
@@ -222,5 +222,4 @@ func (b *CameraBehavior) Update(bctx *wengine.BehaviorContext) {
 	}
 	b.spotLight.Angle = mgl32.DegToRad(float32(25 + 10*bctx.Context.Input().GetAxis("angle")))
 	b.spotLight.Diffuse = mgl32.Vec3{1, 1, 1}.Mul(float32(math.Max(5, 10+30*bctx.Context.Input().GetAxis("intensity"))))
-	//fmt.Println(bctx.Context.Input().GetAxis("mouse x"))
 }
