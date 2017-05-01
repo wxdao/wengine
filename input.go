@@ -100,9 +100,9 @@ func (i *Input) frameStart(currentTime float64) {
 		case AXIS_SOURCE_MOUSE:
 			switch meta.From {
 			case AXIS_FROM_X:
-				value = meta.Sensitivity * (i.curMouseX - i.preMouseX) / (i.currentTime - i.lastTime)
+				value = meta.Sensitivity * (i.curMouseX - i.preMouseX)
 			case AXIS_FROM_Y:
-				value = meta.Sensitivity * (i.curMouseY - i.preMouseY) / (i.currentTime - i.lastTime)
+				value = meta.Sensitivity * (i.curMouseY - i.preMouseY)
 
 			}
 		}

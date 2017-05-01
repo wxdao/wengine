@@ -65,12 +65,12 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	context.Input().BindAxis("mouse x", wengine.AxisMeta{
 		Source:      wengine.AXIS_SOURCE_MOUSE,
 		From:        wengine.AXIS_FROM_X,
-		Sensitivity: 0.001,
+		Sensitivity: 0.01,
 	})
 	context.Input().BindAxis("mouse y", wengine.AxisMeta{
 		Source:      wengine.AXIS_SOURCE_MOUSE,
 		From:        wengine.AXIS_FROM_Y,
-		Sensitivity: 0.001,
+		Sensitivity: 0.01,
 	})
 
 	camera := &wengine.CameraComponent{}
@@ -184,7 +184,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 }
 
 type RotationBehavior struct {
-	axis  mgl32.Vec3
+	axis mgl32.Vec3
 }
 
 func (b *RotationBehavior) Start(bctx *wengine.BehaviorContext) {
