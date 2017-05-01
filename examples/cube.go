@@ -36,6 +36,7 @@ func main() {
 		WindowMode:  wengine.WINDOW_MODE_WINDOWED,
 		WindowTitle: "wEngine Example: cube",
 		FrameLimit:  30,
+		VSync:       true,
 	}
 	app, _ = wengine.NewApp(config)
 	context := app.Context()

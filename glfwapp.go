@@ -152,6 +152,7 @@ type Config struct {
 	WindowMode    int
 	WindowTitle   string
 	FrameLimit    int
+	VSync         bool
 }
 
 type App struct {
@@ -161,6 +162,7 @@ type App struct {
 	winMode       int
 	title         string
 	frameLimit    int
+	vSync         bool
 
 	lastScene *Scene
 
@@ -180,6 +182,7 @@ func NewApp(config *Config) (*App, error) {
 		title:      config.WindowTitle,
 		winMode:    config.WindowMode,
 		frameLimit: config.FrameLimit,
+		vSync:      config.VSync,
 		context:    config.Context,
 	}, nil
 }
@@ -232,7 +235,11 @@ func (a *App) Run() error {
 
 	fmt.Println("OpenGL version", a.context.renderer.Version())
 
-	glfw.SwapInterval(1)
+	if a.vSync {
+		glfw.SwapInterval(1)
+	} else {
+		glfw.SwapInterval(0)
+	}
 
 	fps := 0
 	fpsDisplayLastTime := a.currentTime
