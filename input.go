@@ -97,8 +97,19 @@ func (i *Input) frameStart(currentTime float64) {
 			if value < -1 {
 				value = -1
 			}
-			i.axisValue[meta] = value
+		case AXIS_SOURCE_MOUSE:
+			switch meta.From {
+			case AXIS_FROM_X:
+				value = meta.Sensitivity * (i.curMouseX - i.preMouseX) / (i.currentTime - i.lastTime)
+			case AXIS_FROM_Y:
+				value = meta.Sensitivity * (i.curMouseY - i.preMouseY) / (i.currentTime - i.lastTime)
+
+			}
 		}
+		if math.Abs(value) <= meta.Dead {
+			value = 0
+		}
+		i.axisValue[meta] = value
 	}
 }
 

@@ -35,7 +35,7 @@ func main() {
 		Height:      600,
 		WindowMode:  wengine.WINDOW_MODE_WINDOWED,
 		WindowTitle: "wEngine Example: cube",
-		FrameLimit:  30,
+		FrameLimit:  50,
 	}
 	app, _ = wengine.NewApp(config)
 	context := app.Context()
@@ -54,12 +54,22 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 		Gravity:     0.5,
 		Sensitivity: 0.5,
 	})
+	context.Input().BindAxis("angle", wengine.AxisMeta{
+		Source:      wengine.AXIS_SOURCE_MOUSE,
+		From:        wengine.AXIS_FROM_Y,
+		Sensitivity: 0.001,
+	})
 	context.Input().BindAxis("intensity", wengine.AxisMeta{
 		Source:      wengine.AXIS_SOURCE_KEY,
 		PositiveKey: "e",
 		NegativeKey: "d",
 		Gravity:     0.5,
 		Sensitivity: 0.5,
+	})
+	context.Input().BindAxis("intensity", wengine.AxisMeta{
+		Source:      wengine.AXIS_SOURCE_MOUSE,
+		From:        wengine.AXIS_FROM_X,
+		Sensitivity: 0.001,
 	})
 
 	camera := &wengine.CameraComponent{}
@@ -212,4 +222,5 @@ func (b *CameraBehavior) Update(bctx *wengine.BehaviorContext) {
 	}
 	b.spotLight.Angle = mgl32.DegToRad(float32(25 + 10*bctx.Context.Input().GetAxis("angle")))
 	b.spotLight.Diffuse = mgl32.Vec3{1, 1, 1}.Mul(float32(math.Max(5, 10+30*bctx.Context.Input().GetAxis("intensity"))))
+	//fmt.Println(bctx.Context.Input().GetAxis("mouse x"))
 }

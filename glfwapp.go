@@ -212,7 +212,6 @@ func (a *App) Run() error {
 	a.window.MakeContextCurrent()
 
 	a.window.SetKeyCallback(a.keyCallBack)
-	a.window.SetCursorPosCallback(a.cursorPos)
 
 	scrWidth, scrHeight := a.window.GetFramebufferSize()
 	a.context.SetScreenSize(scrWidth, scrHeight)
@@ -231,8 +230,8 @@ func (a *App) Run() error {
 	a.currentTime = glfw.GetTime()
 
 	// initialize input
-	a.context.input.frameStart(a.currentTime)
 	a.context.input.curMouseX, a.context.input.curMouseY = a.window.GetCursorPos()
+	a.context.input.frameStart(a.currentTime)
 	a.context.input.frameEnd()
 
 	for !a.window.ShouldClose() {
@@ -260,6 +259,7 @@ func (a *App) Run() error {
 		}
 		a.window.SwapBuffers()
 		glfw.PollEvents()
+		a.context.input.curMouseX, a.context.input.curMouseY = a.window.GetCursorPos()
 		a.context.input.frameStart(a.currentTime)
 		a.executeBehaviors(false)
 		a.context.input.frameEnd()
@@ -312,8 +312,4 @@ func (a *App) keyCallBack(w *glfw.Window, key glfw.Key, scancode int, action glf
 	if action == glfw.Release {
 		a.context.input.curKeyState[keyMap[key]] = KEY_STATE_UP
 	}
-}
-
-func (a *App) cursorPos(w *glfw.Window, xpos, ypos float64) {
-	fmt.Println(a, xpos, ypos)
 }
