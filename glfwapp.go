@@ -146,6 +146,8 @@ type Config struct {
 }
 
 type App struct {
+	window *glfw.Window
+
 	width, height int
 	winMode       int
 	title         string
@@ -194,13 +196,12 @@ func (a *App) Run() error {
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 
-	var window *glfw.Window
 	switch a.winMode {
 	case WINDOW_MODE_WINDOWED:
-		window, err = glfw.CreateWindow(a.width, a.height, a.title, nil, nil)
+		a.window, err = glfw.CreateWindow(a.width, a.height, a.title, nil, nil)
 		break
 	case WINDOW_MODE_FULL_SCREEN:
-		window, err = glfw.CreateWindow(a.width, a.height, a.title, glfw.GetPrimaryMonitor(), nil)
+		a.window, err = glfw.CreateWindow(a.width, a.height, a.title, glfw.GetPrimaryMonitor(), nil)
 		break
 	default:
 		return errors.New("window uninitialized")
@@ -208,12 +209,12 @@ func (a *App) Run() error {
 	if err != nil {
 		return errors.New(fmt.Sprint("unable to init window:", err))
 	}
-	window.MakeContextCurrent()
+	a.window.MakeContextCurrent()
 
-	window.SetKeyCallback(a.keyCallBack)
-	window.SetCursorPosCallback(a.cursorPos)
+	a.window.SetKeyCallback(a.keyCallBack)
+	a.window.SetCursorPosCallback(a.cursorPos)
 
-	scrWidth, scrHeight := window.GetFramebufferSize()
+	scrWidth, scrHeight := a.window.GetFramebufferSize()
 	a.context.SetScreenSize(scrWidth, scrHeight)
 
 	if err := a.context.renderer.Init(a.context); err != nil {
@@ -231,10 +232,10 @@ func (a *App) Run() error {
 
 	// initialize input
 	a.context.input.frameStart(a.currentTime)
-	a.context.input.curMouseX, a.context.input.curMouseY = window.GetCursorPos()
+	a.context.input.curMouseX, a.context.input.curMouseY = a.window.GetCursorPos()
 	a.context.input.frameEnd()
 
-	for !window.ShouldClose() {
+	for !a.window.ShouldClose() {
 		a.lastTime = a.currentTime
 		a.currentTime = glfw.GetTime()
 
@@ -257,7 +258,7 @@ func (a *App) Run() error {
 		if err != nil {
 			return err
 		}
-		window.SwapBuffers()
+		a.window.SwapBuffers()
 		glfw.PollEvents()
 		a.context.input.frameStart(a.currentTime)
 		a.executeBehaviors(false)
@@ -278,6 +279,10 @@ func (a *App) Run() error {
 		}
 	}
 	return nil
+}
+
+func (a *App) Stop() {
+	a.window.SetShouldClose(true)
 }
 
 func (a *App) executeBehaviors(runStart bool) {

@@ -6,14 +6,16 @@ import (
 	"github.com/wxdao/wengine"
 	_ "github.com/wxdao/wengine/opengl"
 	"log"
+	"math"
 	"os"
 	"path"
 	"runtime/pprof"
-	"math"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile `file`")
 var texfile = flag.String("tex", "", "texture file for cube `file`")
+
+var app *wengine.App
 
 func main() {
 	flag.Parse()
@@ -35,7 +37,7 @@ func main() {
 		WindowTitle: "wEngine Example: cube",
 		FrameLimit:  30,
 	}
-	app, _ := wengine.NewApp(config)
+	app, _ = wengine.NewApp(config)
 	context := app.Context()
 	myScene := wengine.NewScene()
 	context.RegisterScene("myScene", myScene)
@@ -191,6 +193,9 @@ func (b *CameraBehavior) Start(bctx *wengine.BehaviorContext) {
 }
 
 func (b *CameraBehavior) Update(bctx *wengine.BehaviorContext) {
+	if bctx.Context.Input().GetKeyUp("esc") {
+		app.Stop()
+	}
 	b.spotLight.Angle = mgl32.DegToRad(float32(25 + 10*bctx.Context.Input().GetAxis("angle")))
 	b.spotLight.Diffuse = mgl32.Vec3{1, 1, 1}.Mul(float32(math.Max(5, 10+30*bctx.Context.Input().GetAxis("intensity"))))
 }
