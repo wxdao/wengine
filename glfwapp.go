@@ -264,6 +264,13 @@ func (a *App) Run() error {
 		a.executeBehaviors(false)
 		a.context.input.frameEnd()
 
+		switch a.context.input.cursorMode {
+		case CURSOR_MODE_NORMAL:
+			a.window.SetInputMode(glfw.CursorMode, glfw.CursorNormal)
+		case CURSOR_MODE_DISABLED:
+			a.window.SetInputMode(glfw.CursorMode, glfw.CursorDisabled)
+		}
+
 		if a.frameLimit != 0 {
 			sleepTime := 1.0/float64(a.frameLimit) - (glfw.GetTime() - a.currentTime)
 			if sleepTime > 0 {
@@ -308,5 +315,5 @@ func (a *App) keyCallBack(w *glfw.Window, key glfw.Key, scancode int, action glf
 }
 
 func (a *App) cursorPos(w *glfw.Window, xpos, ypos float64) {
-	//fmt.Println(a, xpos, ypos)
+	fmt.Println(a, xpos, ypos)
 }

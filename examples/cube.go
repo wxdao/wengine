@@ -186,15 +186,29 @@ func (b *CubeBehavior) Update(bctx *wengine.BehaviorContext) {
 
 type CameraBehavior struct {
 	spotLight *wengine.LightComponent
+
+	lastCursorMode int
 }
 
 func (b *CameraBehavior) Start(bctx *wengine.BehaviorContext) {
+	b.lastCursorMode = wengine.CURSOR_MODE_NORMAL
+	bctx.Context.Input().SetCursorMode(b.lastCursorMode)
+
 	b.spotLight = bctx.Context.CurrentScene().Objects()["spotLight"].Components()[wengine.COMPO_LIGHT].(*wengine.LightComponent)
 }
 
 func (b *CameraBehavior) Update(bctx *wengine.BehaviorContext) {
 	if bctx.Context.Input().GetKeyUp("esc") {
 		app.Stop()
+	}
+	if bctx.Context.Input().GetKeyUp("v") {
+		if b.lastCursorMode == wengine.CURSOR_MODE_NORMAL {
+			bctx.Context.Input().SetCursorMode(wengine.CURSOR_MODE_DISABLED)
+			b.lastCursorMode = wengine.CURSOR_MODE_DISABLED
+		} else {
+			bctx.Context.Input().SetCursorMode(wengine.CURSOR_MODE_NORMAL)
+			b.lastCursorMode = wengine.CURSOR_MODE_NORMAL
+		}
 	}
 	b.spotLight.Angle = mgl32.DegToRad(float32(25 + 10*bctx.Context.Input().GetAxis("angle")))
 	b.spotLight.Diffuse = mgl32.Vec3{1, 1, 1}.Mul(float32(math.Max(5, 10+30*bctx.Context.Input().GetAxis("intensity"))))

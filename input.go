@@ -30,6 +30,11 @@ type AxisMeta struct {
 	Invert                     bool
 }
 
+const (
+	CURSOR_MODE_NORMAL = iota
+	CURSOR_MODE_DISABLED
+)
+
 type Input struct {
 	preKeyState map[string]int
 	curKeyState map[string]int
@@ -39,6 +44,8 @@ type Input struct {
 
 	axes      map[string][]*AxisMeta
 	axisValue map[*AxisMeta]float64
+
+	cursorMode int
 
 	currentTime, lastTime float64
 }
@@ -101,6 +108,10 @@ func (i *Input) frameEnd() {
 	}
 	i.preMouseX, i.preMouseY = i.curMouseX, i.curMouseY
 	i.lastTime = i.currentTime
+}
+
+func (i *Input) SetCursorMode(mode int) {
+	i.cursorMode = mode
 }
 
 func (i *Input) GetKey(key string) bool {
