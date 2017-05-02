@@ -33,11 +33,14 @@ const (
 )
 
 type CameraComponent struct {
-	Depth     int
-	Mode      int
-	NearPlane float32
-	FarPlane  float32
-	Ambient   mgl32.Vec3
+	Depth                  int
+	Mode                   int
+	NearPlane              float32
+	FarPlane               float32
+	Ambient                mgl32.Vec3
+	ClearColor, ClearDepth bool
+
+	ViewportX, ViewportY, ViewportW, ViewportH float32
 
 	// perspective only
 	FOV float32

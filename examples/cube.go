@@ -42,12 +42,15 @@ func main() {
 	context := app.Context()
 	myScene := wengine.NewScene()
 	context.RegisterScene("myScene", myScene)
+
+	setupInput(context)
 	setupScene(context, myScene)
 	context.ApplyScene("myScene")
+
 	panic(app.Run())
 }
 
-func setupScene(context *wengine.Context, scene *wengine.Scene) {
+func setupInput(context *wengine.Context) {
 	context.Input().BindAxis("angle", wengine.AxisMeta{
 		Source:      wengine.AXIS_SOURCE_KEY,
 		PositiveKey: "w",
@@ -73,8 +76,13 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 		From:        wengine.AXIS_FROM_Y,
 		Sensitivity: 0.01,
 	})
+}
 
+func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	camera := &wengine.CameraComponent{}
+	camera.ViewportX, camera.ViewportY, camera.ViewportW, camera.ViewportH = 0, 0, 1, 1
+	camera.Depth = 0
+	camera.ClearColor, camera.ClearDepth = true, true
 	camera.Mode = wengine.CAMERA_MODE_PERSPECTIVE
 	camera.FOV = mgl32.DegToRad(60)
 	camera.Width = 15
@@ -87,6 +95,23 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	cameraObject.AttachComponent(camera)
 	cameraObject.SetEnabled(true)
 	scene.RegisterObject("mainCamera", cameraObject)
+
+	camera2 := &wengine.CameraComponent{}
+	camera2.ViewportX, camera2.ViewportY, camera2.ViewportW, camera2.ViewportH = 0, 0.6, 0.4, 0.4
+	camera2.Depth = -1
+	camera2.ClearColor, camera2.ClearDepth = false, true
+	camera2.Mode = wengine.CAMERA_MODE_PERSPECTIVE
+	camera2.FOV = mgl32.DegToRad(60)
+	camera2.Width = 15
+	camera2.FarPlane = 100
+	camera2.NearPlane = 0.3
+	camera2.Ambient = mgl32.Vec3{0.2, 0.2, 0.2}
+	cameraObject2 := wengine.NewObject()
+	cameraObject2.Translate(mgl32.Vec3{0, 20, -5})
+	cameraObject2.Rotate(mgl32.DegToRad(-90), mgl32.Vec3{1, 0, 0})
+	cameraObject2.AttachComponent(camera2)
+	cameraObject2.SetEnabled(true)
+	scene.RegisterObject("secondaryCamera", cameraObject2)
 
 	dirLight := &wengine.LightComponent{}
 	dirLight.LightSource = wengine.LIGHT_SOURCE_DIRECTIONAL

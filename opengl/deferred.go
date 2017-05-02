@@ -242,19 +242,22 @@ func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, mes
 }
 
 func (r *deferredShading) geometryPass(lights []*LightComponent, meshes []*MeshComponent, scene *Scene, camera *CameraComponent) error {
+	scrWidth, scrHeight := r.renderer.context.ScreenSize()
+	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
+
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.gBuffer)
 	gl.ClearColor(0, 0, 0, 0)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	cameraObj := camera.Object()
 	view := mgl32.LookAtV(cameraObj.Position(), cameraObj.Position().Add(cameraObj.Forward()), cameraObj.Up())
-	scrWidth, scrHeight := r.renderer.context.ScreenSize()
+	aspect := (camera.ViewportW * float32(scrWidth)) / (camera.ViewportH * float32(scrHeight))
 	var projection mgl32.Mat4
 	switch camera.Mode {
 	case CAMERA_MODE_PERSPECTIVE:
 		projection = mgl32.Perspective(
 			camera.FOV,
-			float32(scrWidth)/float32(scrHeight),
+			aspect,
 			camera.NearPlane,
 			camera.FarPlane,
 		)
@@ -262,8 +265,8 @@ func (r *deferredShading) geometryPass(lights []*LightComponent, meshes []*MeshC
 		projection = mgl32.Ortho(
 			-camera.Width/2,
 			camera.Width/2,
-			-camera.Width*float32(scrHeight)/float32(scrWidth)/2,
-			camera.Width*float32(scrHeight)/float32(scrWidth)/2,
+			-camera.Width/aspect/2,
+			camera.Width/aspect/2,
 			camera.NearPlane,
 			camera.FarPlane,
 		)
@@ -316,12 +319,20 @@ func (r *deferredShading) geometryPass(lights []*LightComponent, meshes []*MeshC
 }
 
 func (r *deferredShading) blendAmbient(targetFBO uint32, camera *CameraComponent) error {
+	scrWidth, scrHeight := r.renderer.context.ScreenSize()
+	gl.Viewport(int32(float32(scrWidth)*camera.ViewportX), int32(float32(scrHeight)*camera.ViewportY), int32(float32(scrWidth)*camera.ViewportW), int32(float32(scrHeight)*camera.ViewportH))
+
 	gl.BindFramebuffer(gl.FRAMEBUFFER, targetFBO)
 	gl.ClearColor(0, 0, 0, 0)
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+	if camera.ClearColor {
+		gl.Clear(gl.COLOR_BUFFER_BIT)
+	}
+	if camera.ClearDepth {
+		gl.Clear(gl.DEPTH_BUFFER_BIT)
+	}
 
 	gl.Enable(gl.BLEND)
-	gl.BlendFunc(gl.ONE, gl.ONE)
+	gl.BlendFunc(gl.ONE, gl.ZERO)
 
 	shader := defaultShaders["deferred_blend_ambient"]
 	gl.UseProgram(shader.program)
@@ -352,7 +363,7 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				gl.UseProgram(shader.program)
 			default:
 				shadowMapShader = defaultShaders["shadow_map_dirLight"]
-				lightMatrix, err := r.generateDirLightShadowMap(shadowMapShader, light, meshes)
+				lightMatrix, err := r.generateDirLightShadowMap(shadowMapShader, light, meshes, camera)
 				if err != nil {
 					return err
 				}
@@ -398,7 +409,7 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				gl.UseProgram(shader.program)
 			default:
 				shadowMapShader = defaultShaders["shadow_map_pointLight"]
-				err := r.generatePointLightShadowMap(shadowMapShader, light, meshes)
+				err := r.generatePointLightShadowMap(shadowMapShader, light, meshes, camera)
 				if err != nil {
 					return err
 				}
@@ -442,7 +453,7 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 				gl.UseProgram(shader.program)
 			default:
 				shadowMapShader = defaultShaders["shadow_map_spotLight"]
-				lightMatrix, err := r.generateSpotLightShadowMap(shadowMapShader, light, meshes)
+				lightMatrix, err := r.generateSpotLightShadowMap(shadowMapShader, light, meshes, camera)
 				if err != nil {
 					return err
 				}
@@ -532,7 +543,7 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 	return nil
 }
 
-func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) (*mgl32.Mat4, error) {
+func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent, camera *CameraComponent) (*mgl32.Mat4, error) {
 	gl.Viewport(0, 0, int32(r.renderer.dirLightShadowMapResolution), int32(r.renderer.dirLightShadowMapResolution))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sDirBuffer)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
@@ -572,11 +583,11 @@ func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, lig
 	}
 
 	scrWidth, scrHeight := r.renderer.context.ScreenSize()
-	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
+	gl.Viewport(int32(float32(scrWidth)*camera.ViewportX), int32(float32(scrHeight)*camera.ViewportY), int32(float32(scrWidth)*camera.ViewportW), int32(float32(scrHeight)*camera.ViewportH))
 	return &lightMatrix, nil
 }
 
-func (r *deferredShading) generatePointLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) error {
+func (r *deferredShading) generatePointLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent, camera *CameraComponent) error {
 	gl.Viewport(0, 0, int32(r.renderer.pointLightShadowMapResolution), int32(r.renderer.pointLightShadowMapResolution))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sPointBuffer)
 	gl.ClearColor(1, 1, 1, 1)
@@ -628,11 +639,11 @@ func (r *deferredShading) generatePointLightShadowMap(shader *glShaderProgram, l
 	}
 
 	scrWidth, scrHeight := r.renderer.context.ScreenSize()
-	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
+	gl.Viewport(int32(float32(scrWidth)*camera.ViewportX), int32(float32(scrHeight)*camera.ViewportY), int32(float32(scrWidth)*camera.ViewportW), int32(float32(scrHeight)*camera.ViewportH))
 	return nil
 }
 
-func (r *deferredShading) generateSpotLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent) (*mgl32.Mat4, error) {
+func (r *deferredShading) generateSpotLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent, camera *CameraComponent) (*mgl32.Mat4, error) {
 	gl.Viewport(0, 0, int32(r.renderer.spotLightShadowMapResolution), int32(r.renderer.spotLightShadowMapResolution))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sSpotBuffer)
 	gl.ClearColor(1, 1, 1, 1)
@@ -673,7 +684,7 @@ func (r *deferredShading) generateSpotLightShadowMap(shader *glShaderProgram, li
 	}
 
 	scrWidth, scrHeight := r.renderer.context.ScreenSize()
-	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
+	gl.Viewport(int32(float32(scrWidth)*camera.ViewportX), int32(float32(scrHeight)*camera.ViewportY), int32(float32(scrWidth)*camera.ViewportW), int32(float32(scrHeight)*camera.ViewportH))
 	return &lightMatrix, nil
 }
 
