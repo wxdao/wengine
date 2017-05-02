@@ -323,6 +323,9 @@ func (r *deferredShading) blendAmbient(targetFBO uint32, camera *CameraComponent
 	gl.Viewport(int32(float32(scrWidth)*camera.ViewportX), int32(float32(scrHeight)*camera.ViewportY), int32(float32(scrWidth)*camera.ViewportW), int32(float32(scrHeight)*camera.ViewportH))
 
 	gl.BindFramebuffer(gl.FRAMEBUFFER, targetFBO)
+
+	gl.Enable(gl.SCISSOR_TEST)
+	gl.Scissor(int32(float32(scrWidth)*camera.ViewportX), int32(float32(scrHeight)*camera.ViewportY), int32(float32(scrWidth)*camera.ViewportW), int32(float32(scrHeight)*camera.ViewportH))
 	gl.ClearColor(0, 0, 0, 0)
 	if camera.ClearColor {
 		gl.Clear(gl.COLOR_BUFFER_BIT)
@@ -330,6 +333,8 @@ func (r *deferredShading) blendAmbient(targetFBO uint32, camera *CameraComponent
 	if camera.ClearDepth {
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
 	}
+	gl.Disable(gl.SCISSOR_TEST)
+
 
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.ONE, gl.ZERO)

@@ -99,7 +99,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	camera2 := &wengine.CameraComponent{}
 	camera2.ViewportX, camera2.ViewportY, camera2.ViewportW, camera2.ViewportH = 0, 0.6, 0.4, 0.4
 	camera2.Depth = -1
-	camera2.ClearColor, camera2.ClearDepth = false, true
+	camera2.ClearColor, camera2.ClearDepth = true, true
 	camera2.Mode = wengine.CAMERA_MODE_PERSPECTIVE
 	camera2.FOV = mgl32.DegToRad(60)
 	camera2.Width = 15
