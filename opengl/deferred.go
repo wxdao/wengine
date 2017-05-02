@@ -237,6 +237,11 @@ func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, mes
 		if err != nil {
 			return err
 		}
+
+		err = r.finalPass(targetFBO, camera)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -334,7 +339,6 @@ func (r *deferredShading) blendAmbient(targetFBO uint32, camera *CameraComponent
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
 	}
 	gl.Disable(gl.SCISSOR_TEST)
-
 
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.ONE, gl.ZERO)
@@ -545,6 +549,15 @@ func (r *deferredShading) lightsPass(targetFBO uint32, lights []*LightComponent,
 		gl.BindTexture(gl.TEXTURE_CUBE_MAP, 0)
 	}
 
+	return nil
+}
+
+func (r *deferredShading) finalPass(targetFBO uint32, camera *CameraComponent) error {
+	scrWidth, scrHeight := r.renderer.context.ScreenSize()
+	gl.BindFramebuffer(gl.READ_FRAMEBUFFER, r.gBuffer)
+	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, targetFBO)
+	gl.BlitFramebuffer(0, 0, int32(scrWidth), int32(scrHeight), int32(float32(scrWidth)*camera.ViewportX), int32(float32(scrHeight)*camera.ViewportY), int32(float32(scrWidth)*camera.ViewportW), int32(float32(scrHeight)*camera.ViewportH), gl.DEPTH_BUFFER_BIT, gl.NEAREST)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, targetFBO)
 	return nil
 }
 
