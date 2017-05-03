@@ -17,9 +17,9 @@ func init() {
 type renderer struct {
 	context *Context
 
-	meshes    map[string]*glMesh
-	materials map[string]*glMaterial
-	programs  map[string]*glShaderProgram
+	meshes        map[string]*glMesh
+	meshMaterials map[string]*glMeshMaterial
+	programs      map[string]*glShaderProgram
 
 	dirLightShadowMapResolution   int
 	pointLightShadowMapResolution int
@@ -37,7 +37,7 @@ type renderer struct {
 func newRenderer() *renderer {
 	r := &renderer{
 		meshes:                        map[string]*glMesh{},
-		materials:                     map[string]*glMaterial{},
+		meshMaterials:                 map[string]*glMeshMaterial{},
 		programs:                      map[string]*glShaderProgram{},
 		dirLightShadowMapResolution:   3072,
 		pointLightShadowMapResolution: 512,
@@ -161,12 +161,12 @@ func (r *renderer) installAll() error {
 				return err
 			}
 			println("installed mesh: " + name)
-		case *MaterialAsset:
-			if _, exists := r.materials[name]; exists {
+		case *MeshMaterialAsset:
+			if _, exists := r.meshMaterials[name]; exists {
 				continue
 			}
-			r.materials[name] = &glMaterial{MaterialAsset: a}
-			if err := r.materials[name].install(); err != nil {
+			r.meshMaterials[name] = &glMeshMaterial{MeshMaterialAsset: a}
+			if err := r.meshMaterials[name].install(); err != nil {
 				return err
 			}
 			println("installed material: " + name)
@@ -230,20 +230,20 @@ func (m *glMesh) install() error {
 
 // -----------------------------------------------------------
 
-type glMaterial struct {
-	*MaterialAsset
+type glMeshMaterial struct {
+	*MeshMaterialAsset
 
 	diffuseMap uint32
 }
 
-func (m *glMaterial) installed() bool {
+func (m *glMeshMaterial) installed() bool {
 	if (m.DiffuseMapPath != "" || m.DiffuseMapBuffer != nil) && m.diffuseMap == 0 {
 		return false
 	}
 	return true
 }
 
-func (m *glMaterial) install() error {
+func (m *glMeshMaterial) install() error {
 	diffuseImage := m.InternalData()
 	if m.diffuseMap == 0 && diffuseImage != nil {
 		// invert y

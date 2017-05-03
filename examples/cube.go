@@ -154,11 +154,11 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	cubeMesh := wengine.DefaultCubeAsset()
 	context.RegisterAsset("cubeMesh", cubeMesh)
 
-	cubeColorMaterial := &wengine.MaterialAsset{}
+	cubeColorMaterial := &wengine.MeshMaterialAsset{}
 	cubeColorMaterial.DiffuseColor = mgl32.Vec4{0.7, 0.7, 0.7, 1}
 	context.RegisterAsset("cubeColorMaterial", cubeColorMaterial)
 
-	cubeMaterial := &wengine.MaterialAsset{}
+	cubeMaterial := &wengine.MeshMaterialAsset{}
 	if *texfile == "" {
 		exe, err := os.Executable()
 		if err != nil {

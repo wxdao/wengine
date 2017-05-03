@@ -73,7 +73,7 @@ func (r *forwardShading) scenePass(targetFBO uint32, lights []*LightComponent, m
 		if mesh.Material == "" {
 			return errors.New("mesh with no material")
 		}
-		if _, exists := r.renderer.materials[mesh.Material]; !exists {
+		if _, exists := r.renderer.meshMaterials[mesh.Material]; !exists {
 			err := r.renderer.helpLoad(mesh.Material)
 			if err != nil {
 				return err
@@ -140,7 +140,7 @@ func (r *forwardShading) selectShader(mesh *MeshComponent, lights []*LightCompon
 		}
 	}
 	hasLights := len(lights) > 0
-	material := r.renderer.materials[mesh.Material]
+	material := r.renderer.meshMaterials[mesh.Material]
 	if material.diffuseMap != 0 {
 		if hasLights {
 			return defaultShaders["mesh_texture"], nil
@@ -191,7 +191,7 @@ func (r *forwardShading) applyShaderToMesh(shader *glShaderProgram, uniform forw
 	viewLoc := gl.GetUniformLocation(shader.program, gl.Str("view\x00"))
 	projectionLoc := gl.GetUniformLocation(shader.program, gl.Str("projection\x00"))
 	cameraPositionLoc := gl.GetUniformLocation(shader.program, gl.Str("cameraPosition\x00"))
-	material := r.renderer.materials[mesh.Material]
+	material := r.renderer.meshMaterials[mesh.Material]
 
 	gl.UseProgram(shader.program)
 

@@ -151,7 +151,7 @@ func (mesh *MeshAsset) load() error {
 
 // -----------------------------------------------------------
 
-type MaterialAsset struct {
+type MeshMaterialAsset struct {
 	DiffuseColor     mgl32.Vec4
 	DiffuseMapPath   string
 	DiffuseMapBuffer []byte
@@ -159,17 +159,17 @@ type MaterialAsset struct {
 	colorImage *image.RGBA
 }
 
-func (m *MaterialAsset) InternalData() (colorImage *image.RGBA) {
+func (m *MeshMaterialAsset) InternalData() (colorImage *image.RGBA) {
 	colorImage = m.colorImage
 	return
 }
 
-func (m *MaterialAsset) Loaded() bool {
+func (m *MeshMaterialAsset) Loaded() bool {
 	return !(m.DiffuseMapPath != "" || m.DiffuseMapBuffer != nil) ||
 		((m.DiffuseMapPath != "" || m.DiffuseMapBuffer != nil) && m.colorImage != nil)
 }
 
-func (m *MaterialAsset) load() error {
+func (m *MeshMaterialAsset) load() error {
 	var imgReader io.Reader
 	if m.DiffuseMapBuffer != nil {
 		imgReader = bytes.NewReader(m.DiffuseMapBuffer)

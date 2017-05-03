@@ -290,7 +290,7 @@ func (r *deferredShading) geometryPass(lights []*LightComponent, meshes []*MeshC
 		if mesh.Material == "" {
 			return errors.New("mesh with no material")
 		}
-		if _, exists := r.renderer.materials[mesh.Material]; !exists {
+		if _, exists := r.renderer.meshMaterials[mesh.Material]; !exists {
 			err := r.renderer.helpLoad(mesh.Material)
 			if err != nil {
 				return err
@@ -715,7 +715,7 @@ func (r *deferredShading) selectShader(mesh *MeshComponent) (*glShaderProgram, e
 			return nil, err
 		}
 	}
-	material := r.renderer.materials[mesh.Material]
+	material := r.renderer.meshMaterials[mesh.Material]
 	if material.diffuseMap != 0 {
 		return defaultShaders["mesh_texture_deferred"], nil
 	} else {
@@ -732,7 +732,7 @@ func (r *deferredShading) applyShaderToMesh(shader *glShaderProgram, uniform def
 	TImodelLoc := shader.getLocation("TImodel")
 	viewLoc := shader.getLocation("view")
 	projectionLoc := shader.getLocation("projection")
-	material := r.renderer.materials[mesh.Material]
+	material := r.renderer.meshMaterials[mesh.Material]
 	tiModel := uniform.model.Mat3().Inv().Transpose()
 
 	gl.UseProgram(shader.program)
