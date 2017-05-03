@@ -141,7 +141,7 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	spotLight.LightSource = wengine.LIGHT_SOURCE_SPOT
 	spotLight.ShadowType = wengine.LIGHT_SHADOW_TYPE_HARD
 	spotLight.Angle = mgl32.DegToRad(30)
-	spotLight.Range = 25
+	spotLight.Range = 26
 	spotLight.Diffuse = mgl32.Vec3{10, 10, 10}
 	spotLight.Specular = mgl32.Vec3{1, 1, 1}
 	spotLightObject := wengine.NewObject()
@@ -154,9 +154,12 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	cubeMesh := wengine.DefaultCubeAsset()
 	context.RegisterAsset("cubeMesh", cubeMesh)
 
-	cubeColorMaterial := &wengine.MeshMaterialAsset{}
-	cubeColorMaterial.DiffuseColor = mgl32.Vec4{0.7, 0.7, 0.7, 1}
-	context.RegisterAsset("cubeColorMaterial", cubeColorMaterial)
+	floorMesh := wengine.DefaultPlaneAsset()
+	context.RegisterAsset("floorMesh", floorMesh)
+
+	floorMaterial := &wengine.MeshMaterialAsset{}
+	floorMaterial.DiffuseColor = mgl32.Vec4{0.7, 0.7, 0.7, 1}
+	context.RegisterAsset("floorMaterial", floorMaterial)
 
 	cubeMaterial := &wengine.MeshMaterialAsset{}
 	if *texfile == "" {
@@ -196,17 +199,17 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	cubeObject2.SetEnabled(true)
 	scene.RegisterObject("simpleCube2", cubeObject2)
 
-	cubeObject3 := wengine.NewObject()
-	cubeObject3.Translate(mgl32.Vec3{0, -5, 0})
-	cubeObject3.Scale(mgl32.Vec3{100, 1, 100})
-	cubeObject3.AttachComponent(&wengine.MeshComponent{
-		Mesh:          "cubeMesh",
-		Material:      "cubeColorMaterial",
+	floorObject := wengine.NewObject()
+	floorObject.Translate(mgl32.Vec3{0, -5, 0})
+	floorObject.Scale(mgl32.Vec3{100, 1, 100})
+	floorObject.AttachComponent(&wengine.MeshComponent{
+		Mesh:          "floorMesh",
+		Material:      "floorMaterial",
 		CastShadow:    false,
 		ReceiveShader: true,
 	})
-	cubeObject3.SetEnabled(true)
-	scene.RegisterObject("simpleCube3", cubeObject3)
+	floorObject.SetEnabled(true)
+	scene.RegisterObject("floor", floorObject)
 }
 
 type RotationBehavior struct {

@@ -33,6 +33,10 @@ func DefaultCubeAsset() *MeshAsset {
 	return &MeshAsset{Buffer: []byte(defaultCubeObj)}
 }
 
+func DefaultPlaneAsset() *MeshAsset {
+	return &MeshAsset{Buffer: []byte(defaultPlaneObj)}
+}
+
 func (mesh *MeshAsset) InternalData() (vertices []mgl32.Vec3, uvs []mgl32.Vec2, norms []mgl32.Vec3) {
 	vertices = mesh.vertices
 	uvs = mesh.uvs
@@ -181,13 +185,51 @@ func (m *MeshMaterialAsset) load() error {
 		}
 		imgReader = file
 	}
-	img, format, err := image.Decode(imgReader)
-	println("image format: " + format)
+	img, _, err := image.Decode(imgReader)
 	if err != nil {
 		return err
 	}
 	m.colorImage = image.NewRGBA(img.Bounds())
 	draw.Draw(m.colorImage, m.colorImage.Bounds(), img, image.Point{0, 0}, draw.Src)
+	return nil
+}
+
+// -----------------------------------------------------------
+
+type SpriteMaterialAsset struct {
+	TexturePath   string
+	TextureBuffer []byte
+
+	textureImage *image.RGBA
+}
+
+func (m *SpriteMaterialAsset) InternalData() (colorImage *image.RGBA) {
+	colorImage = m.textureImage
+	return
+}
+
+func (m *SpriteMaterialAsset) Loaded() bool {
+	return m.textureImage != nil
+}
+
+func (m *SpriteMaterialAsset) load() error {
+	var imgReader io.Reader
+	if m.TextureBuffer != nil {
+		imgReader = bytes.NewReader(m.TextureBuffer)
+	} else if m.TexturePath != "" {
+		file, err := os.Open(m.TexturePath)
+		defer file.Close()
+		if err != nil {
+			return err
+		}
+		imgReader = file
+	}
+	img, _, err := image.Decode(imgReader)
+	if err != nil {
+		return err
+	}
+	m.textureImage = image.NewRGBA(img.Bounds())
+	draw.Draw(m.textureImage, m.textureImage.Bounds(), img, image.Point{0, 0}, draw.Src)
 	return nil
 }
 
@@ -253,4 +295,21 @@ f 5/6/3 6/5/3 2/7/3
 f 6/5/4 7/13/4 3/9/4
 f 3/11/5 7/13/5 8/4/5
 f 1/12/6 4/14/6 8/4/6
+`
+const defaultPlaneObj = `
+# Blender v2.78 (sub 0) OBJ File: ''
+# www.blender.org
+o Plane
+v -1.000000 0.000000 1.000000
+v 1.000000 0.000000 1.000000
+v -1.000000 0.000000 -1.000000
+v 1.000000 0.000000 -1.000000
+vt 0.9999 0.0001
+vt 0.0001 0.9999
+vt 0.0001 0.0001
+vt 0.9999 0.9999
+vn 0.0000 1.0000 0.0000
+s off
+f 2/1/1 3/2/1 1/3/1
+f 2/1/1 4/4/1 3/2/1
 `
