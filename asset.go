@@ -317,7 +317,7 @@ f 2/1/1 4/4/1 3/2/1
 const defaultSpriteObj = `
 # Blender v2.78 (sub 0) OBJ File: ''
 # www.blender.org
-o Plane
+o Sprite
 v -1.000000 -1.000000 -0.000000
 v 1.000000 -1.000000 -0.000000
 v -1.000000 1.000000 0.000000
