@@ -6,6 +6,7 @@ const (
 	COMPO_CAMERA = iota
 	COMPO_LIGHT
 	COMPO_MESH
+	COMPO_SPRITE
 )
 
 type Component interface {
@@ -101,4 +102,15 @@ type LightComponent struct {
 
 func (LightComponent) Type() int {
 	return COMPO_LIGHT
+}
+
+type SpriteComponent struct {
+	Material string
+	Shader   string
+
+	componentBase
+}
+
+func (SpriteComponent) Type() int {
+	return COMPO_SPRITE
 }

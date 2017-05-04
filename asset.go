@@ -24,9 +24,9 @@ type MeshAsset struct {
 	Path   string
 	Buffer []byte
 
-	vertices []mgl32.Vec3
-	uvs      []mgl32.Vec2
-	norms    []mgl32.Vec3
+	Vertices []mgl32.Vec3
+	UVs      []mgl32.Vec2
+	Normals  []mgl32.Vec3
 }
 
 func DefaultCubeAsset() *MeshAsset {
@@ -37,15 +37,8 @@ func DefaultPlaneAsset() *MeshAsset {
 	return &MeshAsset{Buffer: []byte(defaultPlaneObj)}
 }
 
-func (mesh *MeshAsset) InternalData() (vertices []mgl32.Vec3, uvs []mgl32.Vec2, norms []mgl32.Vec3) {
-	vertices = mesh.vertices
-	uvs = mesh.uvs
-	norms = mesh.norms
-	return
-}
-
 func (mesh *MeshAsset) Loaded() bool {
-	return mesh.vertices != nil && mesh.norms != nil && mesh.uvs != nil
+	return mesh.Vertices != nil && mesh.Normals != nil && mesh.UVs != nil
 }
 
 func (mesh *MeshAsset) load() error {
@@ -145,9 +138,9 @@ func (mesh *MeshAsset) load() error {
 	}
 	for _, face := range faces {
 		for _, v := range face {
-			mesh.vertices = append(mesh.vertices, vertices[v[0]-1])
-			mesh.uvs = append(mesh.uvs, uvs[v[1]-1])
-			mesh.norms = append(mesh.norms, norms[v[2]-1])
+			mesh.Vertices = append(mesh.Vertices, vertices[v[0]-1])
+			mesh.UVs = append(mesh.UVs, uvs[v[1]-1])
+			mesh.Normals = append(mesh.Normals, norms[v[2]-1])
 		}
 	}
 	return nil
@@ -160,17 +153,12 @@ type MeshMaterialAsset struct {
 	DiffuseMapPath   string
 	DiffuseMapBuffer []byte
 
-	colorImage *image.RGBA
-}
-
-func (m *MeshMaterialAsset) InternalData() (colorImage *image.RGBA) {
-	colorImage = m.colorImage
-	return
+	DiffuseImage *image.RGBA
 }
 
 func (m *MeshMaterialAsset) Loaded() bool {
 	return !(m.DiffuseMapPath != "" || m.DiffuseMapBuffer != nil) ||
-		((m.DiffuseMapPath != "" || m.DiffuseMapBuffer != nil) && m.colorImage != nil)
+		((m.DiffuseMapPath != "" || m.DiffuseMapBuffer != nil) && m.DiffuseImage != nil)
 }
 
 func (m *MeshMaterialAsset) load() error {
@@ -189,8 +177,8 @@ func (m *MeshMaterialAsset) load() error {
 	if err != nil {
 		return err
 	}
-	m.colorImage = image.NewRGBA(img.Bounds())
-	draw.Draw(m.colorImage, m.colorImage.Bounds(), img, image.Point{0, 0}, draw.Src)
+	m.DiffuseImage = image.NewRGBA(img.Bounds())
+	draw.Draw(m.DiffuseImage, m.DiffuseImage.Bounds(), img, image.Point{0, 0}, draw.Src)
 	return nil
 }
 
@@ -200,16 +188,11 @@ type SpriteMaterialAsset struct {
 	TexturePath   string
 	TextureBuffer []byte
 
-	textureImage *image.RGBA
-}
-
-func (m *SpriteMaterialAsset) InternalData() (colorImage *image.RGBA) {
-	colorImage = m.textureImage
-	return
+	TextureImage *image.RGBA
 }
 
 func (m *SpriteMaterialAsset) Loaded() bool {
-	return m.textureImage != nil
+	return m.TextureImage != nil
 }
 
 func (m *SpriteMaterialAsset) load() error {
@@ -228,8 +211,8 @@ func (m *SpriteMaterialAsset) load() error {
 	if err != nil {
 		return err
 	}
-	m.textureImage = image.NewRGBA(img.Bounds())
-	draw.Draw(m.textureImage, m.textureImage.Bounds(), img, image.Point{0, 0}, draw.Src)
+	m.TextureImage = image.NewRGBA(img.Bounds())
+	draw.Draw(m.TextureImage, m.TextureImage.Bounds(), img, image.Point{0, 0}, draw.Src)
 	return nil
 }
 

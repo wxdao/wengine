@@ -197,8 +197,7 @@ func (m *glMesh) install() error {
 		return nil
 	}
 
-	vertices, uvs, norms := m.InternalData()
-	m.num = len(vertices)
+	m.num = len(m.Vertices)
 
 	gl.GenVertexArrays(1, &m.vao)
 	gl.BindVertexArray(m.vao)
@@ -208,17 +207,17 @@ func (m *glMesh) install() error {
 
 	// vertices
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0])
-	gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*3*4, gl.Ptr(vertices), gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, len(m.Vertices)*3*4, gl.Ptr(m.Vertices), gl.STATIC_DRAW)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
 	gl.EnableVertexAttribArray(0)
 	// uvs
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo[1])
-	gl.BufferData(gl.ARRAY_BUFFER, len(uvs)*2*4, gl.Ptr(uvs), gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, len(m.UVs)*2*4, gl.Ptr(m.UVs), gl.STATIC_DRAW)
 	gl.VertexAttribPointer(1, 2, gl.FLOAT, false, 0, gl.PtrOffset(0))
 	gl.EnableVertexAttribArray(1)
 	// norms
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo[2])
-	gl.BufferData(gl.ARRAY_BUFFER, len(norms)*3*4, gl.Ptr(norms), gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, len(m.Normals)*3*4, gl.Ptr(m.Normals), gl.STATIC_DRAW)
 	gl.VertexAttribPointer(2, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
 	gl.EnableVertexAttribArray(2)
 
@@ -244,7 +243,7 @@ func (m *glMeshMaterial) installed() bool {
 }
 
 func (m *glMeshMaterial) install() error {
-	diffuseImage := m.InternalData()
+	diffuseImage := m.DiffuseImage
 	if m.diffuseMap == 0 && diffuseImage != nil {
 		// invert y
 		flipped := image.NewRGBA(diffuseImage.Bounds())
@@ -260,6 +259,58 @@ func (m *glMeshMaterial) install() error {
 
 		gl.GenTextures(1, &m.diffuseMap)
 		gl.BindTexture(gl.TEXTURE_2D, m.diffuseMap)
+		gl.TexImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.RGBA,
+			int32(xLen),
+			int32(yLen),
+			0,
+			gl.RGBA,
+			gl.UNSIGNED_BYTE,
+			gl.Ptr(flipped.Pix),
+		)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+		gl.GenerateMipmap(gl.TEXTURE_2D)
+		gl.BindTexture(gl.TEXTURE_2D, 0)
+	}
+	return nil
+}
+
+// -----------------------------------------------------------
+
+type glSpriteMaterial struct {
+	*SpriteMaterialAsset
+
+	texture uint32
+}
+
+func (m *glSpriteMaterial) installed() bool {
+	if m.texture == 0 {
+		return false
+	}
+	return true
+}
+
+func (m *glSpriteMaterial) install() error {
+	if m.texture == 0 && m.TextureImage != nil {
+		// invert y
+		flipped := image.NewRGBA(m.TextureImage.Bounds())
+		xLen := m.TextureImage.Rect.Size().X
+		yLen := m.TextureImage.Rect.Size().Y
+		for y := 0; y < yLen; y++ {
+			for x := 0; x < xLen; x++ {
+				end := yLen - y
+				o := m.TextureImage.At(x, end)
+				flipped.Set(x, y, o)
+			}
+		}
+
+		gl.GenTextures(1, &m.texture)
+		gl.BindTexture(gl.TEXTURE_2D, m.texture)
 		gl.TexImage2D(
 			gl.TEXTURE_2D,
 			0,
