@@ -93,19 +93,22 @@ func (r *renderer) Render(scene *Scene) error {
 	// find all cameras
 	cameras := []*CameraComponent{}
 	meshes := []*MeshComponent{}
+	sprites := []*SpriteComponent{}
 	lights := []*LightComponent{}
 	for _, obj := range scene.Objects() {
 		if !obj.Enabled() {
 			continue
 		}
 		for _, compo := range obj.Components() {
-			switch compo.Type() {
-			case COMPO_CAMERA:
-				cameras = append(cameras, compo.(*CameraComponent))
-			case COMPO_MESH:
-				meshes = append(meshes, compo.(*MeshComponent))
-			case COMPO_LIGHT:
-				lights = append(lights, compo.(*LightComponent))
+			switch c := compo.(type) {
+			case *CameraComponent:
+				cameras = append(cameras, c)
+			case *MeshComponent:
+				meshes = append(meshes, c)
+			case *LightComponent:
+				lights = append(lights, c)
+			case *SpriteComponent:
+				sprites = append(sprites, c)
 			}
 		}
 	}
@@ -114,8 +117,10 @@ func (r *renderer) Render(scene *Scene) error {
 		return !(cameras[i].Depth < cameras[j].Depth)
 	})
 	// hand over to renderPath
-	if err := r.pc.render(0, lights, meshes, scene, cameras); err != nil {
-		return err
+	for _, camera := range cameras {
+		if err := r.pc.render(0, lights, meshes, scene, camera); err != nil {
+			return err
+		}
 	}
 	return nil
 }

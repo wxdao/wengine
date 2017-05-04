@@ -17,12 +17,10 @@ func (r *forwardShading) init() error {
 	return nil
 }
 
-func (r *forwardShading) render(targetFBO uint32, lights []*LightComponent, meshes []*MeshComponent, scene *Scene, cameras []*CameraComponent) error {
-	for _, camera := range cameras {
-		err := r.scenePass(targetFBO, lights, meshes, scene, camera)
-		if err != nil {
-			return err
-		}
+func (r *forwardShading) render(targetFBO uint32, lights []*LightComponent, meshes []*MeshComponent, scene *Scene, camera *CameraComponent) error {
+	err := r.scenePass(targetFBO, lights, meshes, scene, camera)
+	if err != nil {
+		return err
 	}
 	return nil
 }

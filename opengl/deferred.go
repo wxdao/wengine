@@ -221,27 +221,25 @@ func (r *deferredShading) initQuad() error {
 	return nil
 }
 
-func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, meshes []*MeshComponent, scene *Scene, cameras []*CameraComponent) error {
-	for _, camera := range cameras {
-		err := r.geometryPass(lights, meshes, scene, camera)
-		if err != nil {
-			return err
-		}
+func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, meshes []*MeshComponent, scene *Scene, camera *CameraComponent) error {
+	err := r.geometryPass(lights, meshes, scene, camera)
+	if err != nil {
+		return err
+	}
 
-		err = r.blendAmbient(targetFBO, camera)
-		if err != nil {
-			return err
-		}
+	err = r.blendAmbient(targetFBO, camera)
+	if err != nil {
+		return err
+	}
 
-		err = r.lightsPass(targetFBO, lights, meshes, camera)
-		if err != nil {
-			return err
-		}
+	err = r.lightsPass(targetFBO, lights, meshes, camera)
+	if err != nil {
+		return err
+	}
 
-		err = r.finalPass(targetFBO, camera)
-		if err != nil {
-			return err
-		}
+	err = r.finalPass(targetFBO, camera)
+	if err != nil {
+		return err
 	}
 	return nil
 }
