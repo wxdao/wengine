@@ -118,7 +118,7 @@ func (r *renderer) Render(scene *Scene) error {
 	})
 	// hand over to renderPath
 	for _, camera := range cameras {
-		if err := r.pc.render(0, lights, meshes, scene, camera); err != nil {
+		if err := r.pc.render(0, lights, meshes, sprites, scene, camera); err != nil {
 			return err
 		}
 	}

@@ -221,7 +221,7 @@ func (r *deferredShading) initQuad() error {
 	return nil
 }
 
-func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, meshes []*MeshComponent, scene *Scene, camera *CameraComponent) error {
+func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, meshes []*MeshComponent, sprites []*SpriteComponent, scene *Scene, camera *CameraComponent) error {
 	err := r.geometryPass(lights, meshes, scene, camera)
 	if err != nil {
 		return err
