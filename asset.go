@@ -29,12 +29,16 @@ type MeshAsset struct {
 	Normals  []mgl32.Vec3
 }
 
-func DefaultCubeAsset() *MeshAsset {
+func DefaultCubeMeshAsset() *MeshAsset {
 	return &MeshAsset{Buffer: []byte(defaultCubeObj)}
 }
 
-func DefaultPlaneAsset() *MeshAsset {
+func DefaultPlaneMeshAsset() *MeshAsset {
 	return &MeshAsset{Buffer: []byte(defaultPlaneObj)}
+}
+
+func DefaultSpriteMeshAsset() *MeshAsset {
+	return &MeshAsset{Buffer: []byte(defaultSpriteObj)}
 }
 
 func (mesh *MeshAsset) Loaded() bool {

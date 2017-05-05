@@ -151,10 +151,10 @@ func setupScene(context *wengine.Context, scene *wengine.Scene) {
 	spotLightObject.SetEnabled(true)
 	scene.RegisterObject("spotLight", spotLightObject)
 
-	cubeMesh := wengine.DefaultCubeAsset()
+	cubeMesh := wengine.DefaultCubeMeshAsset()
 	context.RegisterAsset("cubeMesh", cubeMesh)
 
-	floorMesh := wengine.DefaultPlaneAsset()
+	floorMesh := wengine.DefaultPlaneMeshAsset()
 	context.RegisterAsset("floorMesh", floorMesh)
 
 	floorMaterial := &wengine.MeshMaterialAsset{}
