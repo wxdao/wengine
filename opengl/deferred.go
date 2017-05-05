@@ -222,7 +222,8 @@ func (r *deferredShading) initQuad() error {
 }
 
 func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, meshes []*MeshComponent, sprites []*SpriteComponent, scene *Scene, camera *CameraComponent) error {
-	err := r.geometryPass(lights, meshes, scene, camera)
+	// for meshes
+	err := r.geometryPass(lights, meshes, camera)
 	if err != nil {
 		return err
 	}
@@ -241,10 +242,12 @@ func (r *deferredShading) render(targetFBO uint32, lights []*LightComponent, mes
 	if err != nil {
 		return err
 	}
+	// for sprites
+
 	return nil
 }
 
-func (r *deferredShading) geometryPass(lights []*LightComponent, meshes []*MeshComponent, scene *Scene, camera *CameraComponent) error {
+func (r *deferredShading) geometryPass(lights []*LightComponent, meshes []*MeshComponent, camera *CameraComponent) error {
 	scrWidth, scrHeight := r.renderer.context.ScreenSize()
 	gl.Viewport(0, 0, int32(scrWidth), int32(scrHeight))
 
@@ -295,7 +298,7 @@ func (r *deferredShading) geometryPass(lights []*LightComponent, meshes []*MeshC
 			}
 			continue
 		}
-		shader, err := r.selectShader(mesh)
+		shader, err := r.selectMeshShader(mesh)
 		if err != nil {
 			return err
 		}
@@ -559,6 +562,80 @@ func (r *deferredShading) finalPass(targetFBO uint32, camera *CameraComponent) e
 	return nil
 }
 
+func (r *deferredShading) spritePass(sprites []*SpriteComponent, camera *CameraComponent) error {
+	scrWidth, scrHeight := r.renderer.context.ScreenSize()
+	cameraObj := camera.Object()
+	view := mgl32.LookAtV(cameraObj.Position(), cameraObj.Position().Add(cameraObj.Forward()), cameraObj.Up())
+	aspect := (camera.ViewportW * float32(scrWidth)) / (camera.ViewportH * float32(scrHeight))
+	var projection mgl32.Mat4
+	switch camera.Mode {
+	case CAMERA_MODE_PERSPECTIVE:
+		projection = mgl32.Perspective(
+			camera.FOV,
+			aspect,
+			camera.NearPlane,
+			camera.FarPlane,
+		)
+	case CAMERA_MODE_ORTHOGRAPHIC:
+		projection = mgl32.Ortho(
+			-camera.Width/2,
+			camera.Width/2,
+			-camera.Width/aspect/2,
+			camera.Width/aspect/2,
+			camera.NearPlane,
+			camera.FarPlane,
+		)
+	}
+	// render meshes
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	for _, sprite := range sprites {
+		model := sprite.Object().ModelMatrix()
+		rMesh, exists := r.renderer.meshes[sprite.Mesh]
+		if !exists {
+			err := r.renderer.helpLoad(sprite.Mesh)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		if sprite.Material == "" {
+			return errors.New("sprite with no material")
+		}
+		var material *glSpriteMaterial
+		if material, exists = r.renderer.spriteMaterials[sprite.Material]; !exists || !material.installed() {
+			err := r.renderer.helpLoad(sprite.Material)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		shader := defaultShaders["sprite"]
+		if shader == nil {
+			continue
+		}
+
+		gl.UseProgram(shader.program)
+
+		gl.UniformMatrix4fv(shader.getLocation("model"), 1, false, &model[0])
+		gl.UniformMatrix4fv(shader.getLocation("view"), 1, false, &view[0])
+		gl.UniformMatrix4fv(shader.getLocation("projection"), 1, false, &projection[0])
+
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, material.texture)
+		gl.Uniform1i(shader.getLocation("textureMap"), 0)
+
+		if err := r.renderer.drawMesh(rMesh); err != nil {
+			return err
+		}
+
+		gl.BindTexture(gl.TEXTURE_2D, 0)
+		gl.UseProgram(0)
+	}
+	gl.Disable(gl.BLEND)
+	return nil
+}
+
 func (r *deferredShading) generateDirLightShadowMap(shader *glShaderProgram, light *LightComponent, meshes []*MeshComponent, camera *CameraComponent) (*mgl32.Mat4, error) {
 	gl.Viewport(0, 0, int32(r.renderer.dirLightShadowMapResolution), int32(r.renderer.dirLightShadowMapResolution))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, r.sDirBuffer)
@@ -704,7 +781,7 @@ func (r *deferredShading) generateSpotLightShadowMap(shader *glShaderProgram, li
 	return &lightMatrix, nil
 }
 
-func (r *deferredShading) selectShader(mesh *MeshComponent) (*glShaderProgram, error) {
+func (r *deferredShading) selectMeshShader(mesh *MeshComponent) (*glShaderProgram, error) {
 	if mesh.Shader != "" {
 		if shader, exists := r.renderer.programs[mesh.Shader]; exists {
 			return shader, nil
@@ -737,7 +814,6 @@ func (r *deferredShading) applyShaderToMesh(shader *glShaderProgram, uniform def
 
 	gl.UniformMatrix4fv(modelLoc, 1, false, &uniform.model[0])
 	gl.UniformMatrix3fv(TImodelLoc, 1, false, &tiModel[0])
-	gl.UniformMatrix4fv(modelLoc, 1, false, &uniform.model[0])
 	gl.UniformMatrix4fv(viewLoc, 1, false, &uniform.view[0])
 	gl.UniformMatrix4fv(projectionLoc, 1, false, &uniform.projection[0])
 
@@ -747,7 +823,7 @@ func (r *deferredShading) applyShaderToMesh(shader *glShaderProgram, uniform def
 		gl.Uniform1f(shader.getLocation("recvShadow"), 0)
 	}
 
-	if material.diffuseMap != 0 {
+	if material.installed() && material.diffuseMap != 0 {
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, material.diffuseMap)
 		gl.Uniform1i(shader.getLocation("diffuseMap"), 0)

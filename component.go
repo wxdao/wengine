@@ -105,6 +105,7 @@ func (LightComponent) Type() int {
 }
 
 type SpriteComponent struct {
+	Mesh     string
 	Material string
 	Shader   string
 

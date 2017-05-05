@@ -17,9 +17,10 @@ func init() {
 type renderer struct {
 	context *Context
 
-	meshes        map[string]*glMesh
-	meshMaterials map[string]*glMeshMaterial
-	programs      map[string]*glShaderProgram
+	meshes          map[string]*glMesh
+	meshMaterials   map[string]*glMeshMaterial
+	spriteMaterials map[string]*glSpriteMaterial
+	programs        map[string]*glShaderProgram
 
 	dirLightShadowMapResolution   int
 	pointLightShadowMapResolution int
