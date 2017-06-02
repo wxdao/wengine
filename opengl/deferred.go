@@ -341,10 +341,7 @@ func (r *deferredShading) blendAmbient(targetFBO uint32, camera *CameraComponent
 	}
 	gl.Disable(gl.SCISSOR_TEST)
 
-	gl.Enable(gl.BLEND)
-	gl.BlendFunc(gl.ONE, gl.ZERO)
-
-	shader := defaultShaders["deferred_blend_ambient"]
+	shader := defaultShaders["deferred_ambient"]
 	gl.UseProgram(shader.program)
 
 	gl.Uniform3fv(shader.getLocation("ambient"), 1, &camera.Ambient[0])
@@ -357,7 +354,6 @@ func (r *deferredShading) blendAmbient(targetFBO uint32, camera *CameraComponent
 	gl.BindVertexArray(0)
 
 	gl.UseProgram(0)
-	gl.Disable(gl.BLEND)
 
 	return nil
 }

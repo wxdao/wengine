@@ -360,7 +360,7 @@ var defaultShaders = map[string]*glShaderProgram{
 	`,
 	},
 
-	"deferred_blend_ambient": {
+	"deferred_ambient": {
 		vertexSource: `
 		#version 410 core
 
